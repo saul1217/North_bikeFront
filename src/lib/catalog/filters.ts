@@ -5,6 +5,7 @@ export type SortOption = "featured" | "price-asc" | "price-desc" | "newest";
 export type CatalogFilters = {
   category?: ProductCategory | string;
   brand?: string;
+  onSale?: boolean;
   bikeType?: BikeType | string;
   size?: string;
   availability?: "in-stock" | "all" | string;
@@ -30,7 +31,7 @@ export function getUniqueBrands(list: Product[] = []): string[] {
 }
 
 export function getUniqueCategories(list: Product[] = []): string[] {
-  return [...new Set(list.map((product) => product.category).filter(Boolean))].sort();
+  return [...new Set(list.map((product) => product.categoryGroup ?? product.category).filter(Boolean))].sort();
 }
 
 export function getAvailableSizes(list: Product[] = []): string[] {
@@ -49,11 +50,14 @@ export function getPriceBounds(list: Product[] = []) {
 export function filterProducts(list: Product[], filters: CatalogFilters): Product[] {
   let result = [...list];
 
-  if (filters.category) result = result.filter((product) => product.category === filters.category);
+  if (filters.category) result = result.filter((product) => (product.categoryGroup ?? product.category) === filters.category);
   if (filters.brand) {
     result = result.filter(
       (product) => product.brand?.toLowerCase() === filters.brand!.toLowerCase(),
     );
+  }
+  if (filters.onSale) {
+    result = result.filter((product) => Boolean(product.compareAtPrice && product.compareAtPrice > product.price));
   }
   if (filters.bikeType) result = result.filter((product) => product.bikeType === filters.bikeType);
   if (filters.size) result = result.filter((product) => product.sizes?.includes(filters.size!));

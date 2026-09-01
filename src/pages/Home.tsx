@@ -17,7 +17,9 @@ export default function Home() {
   if (error) return <><HomeHero /><CatalogError message={error.message} status={error instanceof ApiRequestError ? error.status : undefined} /></>;
   if (products.length === 0) return <><HomeHero /><CatalogEmpty /></>;
 
-  const featured = products.slice(0, 8);
+  const featuredMatches = filterProducts(products, { sort: "featured" }).filter((product) => product.featured);
+  const featured = (featuredMatches.length ? featuredMatches : filterProducts(products, { sort: "featured" })).slice(0, 8);
+  const offers = filterProducts(products, { onSale: true, sort: "price-asc" }).slice(0, 4);
   const protection = filterProducts(products, {
     category: "proteccion",
     sort: "price-asc",
@@ -28,6 +30,7 @@ export default function Home() {
       <HomeHero />
       <CategoryEntry />
       <FeaturedProducts products={featured} />
+      {offers.length > 0 && <CollectionStrip title="Rodada con precio especial" subtitle="Ofertas" href="/products?onSale=1" products={offers} />}
       <EditorialBlock />
       <CollectionStrip
         title="Protección que pedalea"

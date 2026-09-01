@@ -1,27 +1,35 @@
 import Image from "next/image";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 
 export function HomeHero() {
+  const [imageFailed, setImageFailed] = useState(false);
   return (
     <section className="relative isolate min-h-[78vh] overflow-hidden bg-north-dark text-white md:min-h-[78vh]">
       {/* Mobile */}
       <Image
-        src="/images/hero-mobile.png"
+        src="/public/images/hero-mobile.png"
         alt="Orbea MTB — North Bike Chihuahua"
         fill
         priority
         className="object-cover object-[center_40%] md:hidden"
         sizes="100vw"
+        onError={() => setImageFailed(true)}
+        style={imageFailed ? { display: "none" } : undefined}
       />
       {/* Desktop */}
       <Image
-        src="/images/hero.jpg"
+        src="/public/images/hero.jpg"
         alt="Línea Orbea — bicicletas en North Bike Chihuahua"
         fill
         priority
         className="hidden object-cover object-center md:block"
         sizes="100vw"
+        onError={() => setImageFailed(true)}
+        style={imageFailed ? { display: "none" } : undefined}
       />
+
+      {imageFailed && <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,#1a6673_0%,#102027_42%,#071014_100%)]" aria-hidden="true" />}
 
       {/* Blue wash — same North Bike blue cast as the original hero */}
       <div

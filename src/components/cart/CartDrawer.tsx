@@ -2,10 +2,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { Minus, Plus, Trash2, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/catalog/filters";
 import { Button } from "@/components/ui/Button";
+
+function CartItemImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  return src && !failed ? (
+    <Image src={src} alt={alt} fill className="object-cover" sizes="80px" onError={() => setFailed(true)} />
+  ) : (
+    <span className="flex h-full items-center justify-center text-center text-[10px] text-north-steel">Sin imagen</span>
+  );
+}
 
 export function CartDrawer() {
   const {
@@ -79,19 +89,7 @@ export function CartDrawer() {
                     onClick={closeCart}
                     className="relative h-24 w-20 shrink-0 overflow-hidden bg-north-border"
                   >
-                    {item.image ? (
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    ) : (
-                      <span className="flex h-full items-center justify-center text-center text-[10px] text-north-steel">
-                        Sin imagen
-                      </span>
-                    )}
+                    <CartItemImage src={item.image} alt={item.name} />
                   </Link>
                   <div className="flex min-w-0 flex-1 flex-col gap-2">
                     <div className="flex items-start justify-between gap-2">

@@ -22,6 +22,7 @@ export function ProductDetail({
 }) {
   const { addItem } = useCart();
   const [activeImage, setActiveImage] = useState(0);
+  const [imageFailed, setImageFailed] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -107,7 +108,7 @@ export function ProductDetail({
       <div className="grid gap-10 lg:grid-cols-2 lg:gap-14">
         <div>
           <div className="relative mb-3 aspect-[4/5] overflow-hidden bg-north-border md:aspect-square">
-            {product.images[0] ? (
+            {product.images[0] && !imageFailed ? (
               <Image
                 src={product.images[activeImage] ?? product.images[0]}
                 alt={product.name}
@@ -115,6 +116,7 @@ export function ProductDetail({
                 priority
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
+                onError={() => setImageFailed(true)}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-north-steel">
@@ -141,6 +143,7 @@ export function ProductDetail({
                     fill
                     className="object-cover"
                     sizes="120px"
+                    onError={(event) => { event.currentTarget.style.display = "none"; }}
                   />
                 </button>
               ))}

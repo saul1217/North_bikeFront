@@ -68,9 +68,7 @@ export function Footer() {
             <li>Asesoría de talla y compatibilidad</li>
             <li>Mantenimiento y ajustes</li>
             <li>Setup de componentes</li>
-            <li className="pt-2 text-north-steel">
-              Carrito local provisional — sin checkout real
-            </li>
+            <li className="pt-2 text-north-steel">Checkout seguro en entorno de pruebas</li>
           </ul>
         </div>
       </div>

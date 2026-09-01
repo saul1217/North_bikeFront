@@ -39,6 +39,7 @@ export function CategoryEntry() {
               fill
               className="object-cover opacity-70 transition duration-500 group-hover:scale-105 group-hover:opacity-55"
               sizes="(max-width: 768px) 100vw, 50vw"
+              onError={(event) => { event.currentTarget.style.display = "none"; }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-north-dark via-north-dark/40 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5 md:p-6">

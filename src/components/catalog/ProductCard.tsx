@@ -1,11 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import type { Product } from "@/lib/types/product";
 import { Price } from "@/components/ui/Price";
 import { Badge } from "@/components/ui/Badge";
 import { Package } from "lucide-react";
 
 export function ProductCard({ product }: { product: Product }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const onSale = Boolean(
     product.compareAtPrice && product.compareAtPrice > product.price,
   );
@@ -16,13 +18,14 @@ export function ProductCard({ product }: { product: Product }) {
         href={`/products/${product.slug}`}
         className="relative mb-3 aspect-[4/5] overflow-hidden bg-north-border"
       >
-        {product.images[0] ? (
+        {product.images[0] && !imageFailed ? (
           <Image
             src={product.images[0]}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
             className="object-cover transition duration-500 group-hover:scale-[1.03]"
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="flex h-full items-center justify-center text-north-steel">

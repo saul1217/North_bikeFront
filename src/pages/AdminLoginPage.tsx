@@ -13,6 +13,10 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    document.title = "Acceso administrativo | NorthBike";
+  }, []);
+
   if (user) return <Navigate to="/admin" replace />;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -29,10 +33,6 @@ export default function AdminLoginPage() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    document.title = "Acceso administrativo | NorthBike";
-  }, []);
 
   return (
     <main className="grid min-h-screen bg-[#eef2f1] lg:grid-cols-[minmax(360px,0.82fr)_1.18fr]">

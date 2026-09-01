@@ -19,6 +19,15 @@ export type ApiProduct = {
   sku: string;
   name: string;
   category: string;
+  brand?: string | null;
+  description?: string | null;
+  features?: string[] | null;
+  specifications?: Record<string, string> | null;
+  compareAtPrice?: number | string | null;
+  featured?: boolean;
+  isNew?: boolean;
+  bikeType?: string | null;
+  compatibility?: string | null;
   price: number | string;
   stock: number;
   minStock: number;

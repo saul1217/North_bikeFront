@@ -16,6 +16,20 @@ function toAssetUrl(value: string) {
   return new URL(value.replace(/^\//, ""), `${API_BASE_URL}/`).toString();
 }
 
+const categoryGroups: Record<string, string> = {
+  bicicletas: "bicicletas",
+  componentes: "componentes",
+  pedales: "componentes",
+  proteccion: "proteccion",
+  cascos: "proteccion",
+  guantes: "proteccion",
+  accesorios: "accesorios",
+  herramientas: "accesorios",
+  ropa: "ropa",
+  jerseys: "ropa",
+  llantas: "llantas",
+};
+
 function toVariant(variant: ApiProductVariant): ProductVariant {
   const type = variant.size ? "size" : variant.color ? "color" : "option";
   const value = variant.size || variant.color || variant.model || variant.label;
@@ -48,18 +62,21 @@ export function adaptProduct(apiProduct: ApiProduct): Product {
     id: apiProduct.id,
     slug: `${slugify(apiProduct.name) || "producto"}-${apiProduct.id}`,
     name: apiProduct.name,
-    brand: undefined,
+    brand: apiProduct.brand ?? undefined,
     category: apiProduct.category,
+    categoryGroup: categoryGroups[apiProduct.category.toLowerCase()] ?? apiProduct.category,
     price: Number(apiProduct.price),
+    compareAtPrice: apiProduct.compareAtPrice == null ? undefined : Number(apiProduct.compareAtPrice),
     images: rawImages.map(toAssetUrl),
-    description: undefined,
-    features: [],
-    specifications: {},
+    description: apiProduct.description ?? undefined,
+    features: apiProduct.features ?? [],
+    specifications: apiProduct.specifications ?? {},
     variants,
     stock: apiProduct.stock,
-    featured: undefined,
-    isNew: undefined,
-    bikeType: undefined,
+    featured: apiProduct.featured ?? false,
+    isNew: apiProduct.isNew ?? false,
+    bikeType: apiProduct.bikeType ?? undefined,
+    compatibility: apiProduct.compatibility ?? undefined,
     sizes: sizes.length ? [...new Set(sizes)] : undefined,
     sourceUpdatedAt: apiProduct.updatedAt,
   };

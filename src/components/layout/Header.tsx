@@ -12,8 +12,8 @@ const navLinks = [
   { label: "Componentes", href: "/products?category=componentes" },
   { label: "Accesorios", href: "/products?category=accesorios" },
   { label: "Protección", href: "/products?category=proteccion" },
-  { label: "Marcas", href: "/products#marcas" },
-  { label: "Ofertas", href: "/products?sort=featured" },
+  { label: "Marcas", href: "/#marcas" },
+  { label: "Ofertas", href: "/products?onSale=1" },
 ];
 
 export function Header() {

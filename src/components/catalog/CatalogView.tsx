@@ -226,7 +226,8 @@ export function CatalogView({ products }: Props) {
     const params = new URLSearchParams(queryKey);
     return {
       category: params.get("category") ?? undefined,
-      brand: params.get("brand") ?? undefined,
+          brand: params.get("brand") ?? undefined,
+          onSale: params.get("onSale") === "1",
       bikeType: params.get("bikeType") ?? undefined,
       size: params.get("size") ?? undefined,
       availability: params.get("availability") ?? "all",
@@ -250,7 +251,8 @@ export function CatalogView({ products }: Props) {
     const params = new URLSearchParams();
     Object.entries(next).forEach(([key, value]) => {
       if (value === undefined || value === "" || value === "all") return;
-      if (key === "sort" && value === "featured") return;
+       if (key === "sort" && value === "featured") return;
+       if (key === "onSale" && value !== true) return;
       params.set(key, String(value));
     });
     startTransition(() => {
@@ -282,6 +284,7 @@ export function CatalogView({ products }: Props) {
             Resultados para “{values.q}”
           </p>
         )}
+        {values.onSale && <p className="mt-2 text-sm text-north-muted">Productos con precio especial.</p>}
       </div>
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

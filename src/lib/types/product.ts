@@ -19,6 +19,7 @@ export type Product = {
   name: string;
   brand?: string;
   category: ProductCategory;
+  categoryGroup?: ProductCategory;
   subcategory?: string;
   price: number;
   compareAtPrice?: number;
