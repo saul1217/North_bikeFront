@@ -28,6 +28,19 @@ Solo se aceptan variables públicas `VITE_*`. No agregues credenciales de base d
 - Antes de agregar un artículo se vuelve a consultar el catálogo para validar stock y precio; el carrito también reconcilia esos datos al cargar cuando la API está disponible.
 - El carrito sigue siendo local (`northbike-cart`) y provisional. No reserva inventario.
 
+## Panel administrativo
+
+El panel se encuentra en `/admin/login` y reutiliza el login JWT del backend.
+Sólo los usuarios con rol `admin` pueden entrar. La sesión se conserva en
+`sessionStorage` y se invalida automáticamente cuando la API devuelve `401`.
+
+- `/admin` muestra ingresos, pedidos pagados, unidades, ticket promedio y los 10 productos más vendidos.
+- `/admin/orders` permite buscar por folio, cliente o correo, filtrar pago, logística, método de entrega y fechas, y paginar a 25 pedidos.
+- `/admin/orders/:id` muestra el detalle y permite avanzar únicamente el siguiente estado logístico válido para pickup o envío.
+
+El panel no contiene claves de Stripe, no modifica pagos ni realiza reembolsos.
+Las métricas sólo consideran órdenes ecommerce con pago confirmado.
+
 El backend actual no expone campos visuales como marca, descripción, características, especificaciones, `featured`, `isNew` o `bikeType`; el adaptador no los inventa y la interfaz los omite cuando no existen.
 
 ## Checkout y Stripe Test

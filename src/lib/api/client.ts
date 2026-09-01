@@ -52,6 +52,9 @@ export async function apiRequest<T>(
     }
 
     if (!response.ok) {
+      if (response.status === 401 && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("northbike:auth-expired"));
+      }
       throw new ApiRequestError(
         getErrorMessage(payload as ApiErrorPayload | null, `Error HTTP ${response.status}`),
         { kind: "http", status: response.status },

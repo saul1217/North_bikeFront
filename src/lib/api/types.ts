@@ -42,6 +42,88 @@ export type ApiErrorPayload = {
   error?: string;
 };
 
+export type AuthUser = {
+  id: string;
+  username: string;
+  role: "admin" | "cajero" | "taller" | string;
+  mustChangePassword: boolean;
+  email: string | null;
+  emailVerified: boolean;
+};
+
+export type LoginResponse = {
+  access_token: string;
+  user: AuthUser;
+};
+
+export type EcommerceFulfillmentStatus =
+  | "pending"
+  | "preparing"
+  | "ready_for_pickup"
+  | "picked_up"
+  | "shipped"
+  | "delivered";
+
+export type AdminOrderItem = {
+  id: string;
+  productId: string;
+  variantId: string | null;
+  sku: string;
+  name: string;
+  variantLabel: string | null;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+};
+
+export type AdminOrder = {
+  id: string;
+  folio: string;
+  createdAt: string;
+  paidAt: string | null;
+  customer: { name: string; email: string; phone: string };
+  fulfillmentMethod: "pickup" | "shipping";
+  fulfillmentStatus: EcommerceFulfillmentStatus;
+  shippingAddress: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country?: string;
+  } | null;
+  status: string;
+  paymentStatus: string;
+  currency: string;
+  subtotal: number;
+  shippingTotal: number;
+  total: number;
+  reservationExpiresAt: string;
+  items: AdminOrderItem[];
+};
+
+export type AdminOrderListResponse = {
+  items: AdminOrder[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+};
+
+export type AdminSummaryResponse = {
+  from: string | null;
+  to: string | null;
+  currency: "mxn" | string;
+  revenue: number;
+  paidOrders: number;
+  unitsSold: number;
+  averageOrder: number;
+  topProducts: Array<{
+    sku: string;
+    name: string;
+    variantLabel: string | null;
+    unitsSold: number;
+    revenue: number;
+  }>;
+};
+
 export type CheckoutRequest = {
   items: Array<{ productId: string; variantId?: string; quantity: number }>;
   customer: { name: string; email: string; phone: string };
