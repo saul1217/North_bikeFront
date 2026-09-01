@@ -5,6 +5,8 @@ import Home from "@/pages/Home";
 import Products from "@/pages/Products";
 import ProductDetailPage from "@/pages/ProductDetailPage";
 import NotFound from "@/pages/NotFound";
+import CheckoutPage from "@/pages/CheckoutPage";
+import CheckoutSuccessPage from "@/pages/CheckoutSuccessPage";
 
 export function App() {
   return (
@@ -15,6 +17,8 @@ export function App() {
             <Route index element={<Home />} />
             <Route path="products" element={<Products />} />
             <Route path="products/:slug" element={<ProductDetailPage />} />
+            <Route path="checkout" element={<CheckoutPage />} />
+            <Route path="checkout/success" element={<CheckoutSuccessPage />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

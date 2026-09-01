@@ -5,17 +5,22 @@ import { EditorialBlock } from "@/components/home/EditorialBlock";
 import { CollectionStrip } from "@/components/home/CollectionStrip";
 import { BrandsBand } from "@/components/home/BrandsBand";
 import { AdviceCTA } from "@/components/home/AdviceCTA";
-import {
-  filterProducts,
-  getAllProducts,
-  getFeaturedProducts,
-} from "@/lib/catalog/filters";
+import { CatalogEmpty, CatalogError, CatalogLoading } from "@/components/catalog/CatalogStatus";
+import { filterProducts, getUniqueBrands } from "@/lib/catalog/filters";
+import { useProducts } from "@/lib/catalog/useProducts";
+import { ApiRequestError } from "@/lib/api/types";
 
 export default function Home() {
-  const featured = getFeaturedProducts(8);
-  const protection = filterProducts(getAllProducts(), {
+  const { products, isLoading, error } = useProducts();
+
+  if (isLoading) return <CatalogLoading />;
+  if (error) return <><HomeHero /><CatalogError message={error.message} status={error instanceof ApiRequestError ? error.status : undefined} /></>;
+  if (products.length === 0) return <><HomeHero /><CatalogEmpty /></>;
+
+  const featured = products.slice(0, 8);
+  const protection = filterProducts(products, {
     category: "proteccion",
-    sort: "featured",
+    sort: "price-asc",
   }).slice(0, 4);
 
   return (
@@ -30,7 +35,7 @@ export default function Home() {
         href="/products?category=proteccion"
         products={protection}
       />
-      <BrandsBand />
+      <BrandsBand brands={getUniqueBrands(products)} />
       <AdviceCTA />
     </>
   );

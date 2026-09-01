@@ -71,7 +71,7 @@ export function CartDrawer() {
             <ul className="space-y-5">
               {items.map((item) => (
                 <li
-                  key={`${item.productId}-${item.variantLabel ?? "default"}`}
+                  key={`${item.productId}-${item.variantId ?? item.variantLabel ?? "default"}`}
                   className="flex gap-3 border-b border-north-border pb-5"
                 >
                   <Link
@@ -79,20 +79,28 @@ export function CartDrawer() {
                     onClick={closeCart}
                     className="relative h-24 w-20 shrink-0 overflow-hidden bg-north-border"
                   >
-                    <Image
-                      src={item.image}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                      sizes="80px"
-                    />
+                    {item.image ? (
+                      <Image
+                        src={item.image}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                        sizes="80px"
+                      />
+                    ) : (
+                      <span className="flex h-full items-center justify-center text-center text-[10px] text-north-steel">
+                        Sin imagen
+                      </span>
+                    )}
                   </Link>
                   <div className="flex min-w-0 flex-1 flex-col gap-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-north-steel">
-                          {item.brand}
-                        </p>
+                        {item.brand && (
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-north-steel">
+                            {item.brand}
+                          </p>
+                        )}
                         <Link
                           href={`/products/${item.slug}`}
                           onClick={closeCart}
@@ -109,7 +117,7 @@ export function CartDrawer() {
                       <button
                         type="button"
                         onClick={() =>
-                          removeItem(item.productId, item.variantLabel)
+                          removeItem(item.productId, item.variantLabel, item.variantId)
                         }
                         className="p-1 text-north-muted hover:text-north-dark"
                         aria-label="Eliminar"
@@ -127,6 +135,7 @@ export function CartDrawer() {
                               item.productId,
                               item.quantity - 1,
                               item.variantLabel,
+                              item.variantId,
                             )
                           }
                           aria-label="Disminuir"
@@ -145,6 +154,7 @@ export function CartDrawer() {
                               item.productId,
                               item.quantity + 1,
                               item.variantLabel,
+                              item.variantId,
                             )
                           }
                           aria-label="Aumentar"
@@ -171,12 +181,11 @@ export function CartDrawer() {
                 {formatPrice(subtotal)}
               </span>
             </div>
-            <p className="mb-4 text-xs text-north-muted">
-              Demo: el pago aún no está habilitado. Este recorrido termina en el
-              carrito.
+            <p className="mb-4 text-xs leading-relaxed text-north-muted">
+              El checkout reservará el inventario durante el proceso de pago.
             </p>
-            <Button className="w-full" size="lg">
-              Continuar compra
+            <Button className="w-full" size="lg" href="/checkout" onClick={closeCart}>
+              Continuar al checkout
             </Button>
             <button
               type="button"

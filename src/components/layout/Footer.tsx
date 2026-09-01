@@ -69,7 +69,7 @@ export function Footer() {
             <li>Mantenimiento y ajustes</li>
             <li>Setup de componentes</li>
             <li className="pt-2 text-north-steel">
-              Demo frontend — sin checkout real
+              Carrito local provisional — sin checkout real
             </li>
           </ul>
         </div>

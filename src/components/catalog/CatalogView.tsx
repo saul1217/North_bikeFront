@@ -7,12 +7,13 @@ import type { Product } from "@/lib/types/product";
 import {
   filterProducts,
   getAvailableSizes,
+  getUniqueCategories,
   getPriceBounds,
   getUniqueBrands,
   type CatalogFilters,
   type SortOption,
 } from "@/lib/catalog/filters";
-import { bikeTypeLabels, categoryLabels } from "@/lib/data/categories";
+import { categoryLabels } from "@/lib/data/categories";
 import { ProductCard } from "@/components/catalog/ProductCard";
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -40,8 +41,7 @@ function FiltersForm({
   const brands = useMemo(() => getUniqueBrands(products), [products]);
   const sizes = useMemo(() => getAvailableSizes(products), [products]);
   const bounds = useMemo(() => getPriceBounds(products), [products]);
-  const categories = Object.keys(categoryLabels);
-  const bikeTypes = Object.keys(bikeTypeLabels);
+  const categories = getUniqueCategories(products);
 
   return (
     <div className="space-y-8">
@@ -72,7 +72,7 @@ function FiltersForm({
                 onChange={() => onChange({ category: cat })}
                 className="accent-north-primary"
               />
-              {categoryLabels[cat]}
+              {categoryLabels[cat] ?? cat}
             </label>
           ))}
           <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -149,36 +149,6 @@ function FiltersForm({
             }
             className="h-10 border border-north-border px-2 text-sm outline-none focus:border-north-primary"
           />
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-north-steel">
-          Tipo de bicicleta
-        </legend>
-        <div className="space-y-2">
-          {bikeTypes.map((type) => (
-            <label key={type} className="flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="bikeType"
-                checked={(values.bikeType ?? "") === type}
-                onChange={() => onChange({ bikeType: type })}
-                className="accent-north-primary"
-              />
-              {bikeTypeLabels[type]}
-            </label>
-          ))}
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="bikeType"
-              checked={!values.bikeType}
-              onChange={() => onChange({ bikeType: undefined })}
-              className="accent-north-primary"
-            />
-            Todos
-          </label>
         </div>
       </fieldset>
 

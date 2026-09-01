@@ -2,10 +2,11 @@ export type CartItem = {
   productId: string;
   slug: string;
   name: string;
-  brand: string;
+  brand?: string;
   image: string;
   price: number;
   quantity: number;
+  variantId?: string;
   variantLabel?: string;
   maxStock: number;
 };

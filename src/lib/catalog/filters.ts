@@ -1,4 +1,3 @@
-import { products } from "@/lib/data/products";
 import type { BikeType, Product, ProductCategory } from "@/lib/types/product";
 
 export type SortOption = "featured" | "price-asc" | "price-desc" | "newest";
@@ -15,90 +14,64 @@ export type CatalogFilters = {
   sort?: SortOption | string;
 };
 
-export function getAllProducts(): Product[] {
-  return products;
-}
-
-export function getProductBySlug(slug: string): Product | undefined {
-  return products.find((p) => p.slug === slug);
-}
-
-export function getFeaturedProducts(limit = 8): Product[] {
-  return products.filter((p) => p.featured).slice(0, limit);
-}
-
-export function getRelatedProducts(product: Product, limit = 4): Product[] {
-  return products
+export function getRelatedProducts(list: Product[], product: Product, limit = 4): Product[] {
+  return list
     .filter(
-      (p) =>
-        p.id !== product.id &&
-        (p.category === product.category || p.brand === product.brand),
+      (item) =>
+        item.id !== product.id &&
+        (item.category === product.category ||
+          (item.brand && product.brand && item.brand === product.brand)),
     )
     .slice(0, limit);
 }
 
-export function getUniqueBrands(list: Product[] = products): string[] {
-  return [...new Set(list.map((p) => p.brand))].sort();
+export function getUniqueBrands(list: Product[] = []): string[] {
+  return [...new Set(list.flatMap((product) => (product.brand ? [product.brand] : [])))].sort();
 }
 
-export function getAvailableSizes(list: Product[] = products): string[] {
+export function getUniqueCategories(list: Product[] = []): string[] {
+  return [...new Set(list.map((product) => product.category).filter(Boolean))].sort();
+}
+
+export function getAvailableSizes(list: Product[] = []): string[] {
   const sizes = new Set<string>();
-  list.forEach((p) => p.sizes?.forEach((s) => sizes.add(s)));
+  list.forEach((product) => product.sizes?.forEach((size) => sizes.add(size)));
   return [...sizes].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 }
 
-export function getPriceBounds(list: Product[] = products): {
-  min: number;
-  max: number;
-} {
-  const prices = list.map((p) => p.price);
-  return { min: Math.min(...prices), max: Math.max(...prices) };
+export function getPriceBounds(list: Product[] = []) {
+  const prices = list.map((product) => product.price).filter(Number.isFinite);
+  return prices.length
+    ? { min: Math.min(...prices), max: Math.max(...prices) }
+    : { min: 0, max: 0 };
 }
 
-export function filterProducts(
-  list: Product[],
-  filters: CatalogFilters,
-): Product[] {
+export function filterProducts(list: Product[], filters: CatalogFilters): Product[] {
   let result = [...list];
 
-  if (filters.category) {
-    result = result.filter((p) => p.category === filters.category);
-  }
-
+  if (filters.category) result = result.filter((product) => product.category === filters.category);
   if (filters.brand) {
     result = result.filter(
-      (p) => p.brand.toLowerCase() === filters.brand!.toLowerCase(),
+      (product) => product.brand?.toLowerCase() === filters.brand!.toLowerCase(),
     );
   }
-
-  if (filters.bikeType) {
-    result = result.filter((p) => p.bikeType === filters.bikeType);
-  }
-
-  if (filters.size) {
-    result = result.filter((p) => p.sizes?.includes(filters.size!));
-  }
-
-  if (filters.availability === "in-stock") {
-    result = result.filter((p) => p.stock > 0);
-  }
-
+  if (filters.bikeType) result = result.filter((product) => product.bikeType === filters.bikeType);
+  if (filters.size) result = result.filter((product) => product.sizes?.includes(filters.size!));
+  if (filters.availability === "in-stock") result = result.filter((product) => product.stock > 0);
   if (typeof filters.minPrice === "number") {
-    result = result.filter((p) => p.price >= filters.minPrice!);
+    result = result.filter((product) => product.price >= filters.minPrice!);
   }
-
   if (typeof filters.maxPrice === "number") {
-    result = result.filter((p) => p.price <= filters.maxPrice!);
+    result = result.filter((product) => product.price <= filters.maxPrice!);
   }
 
   if (filters.q?.trim()) {
-    const q = filters.q.trim().toLowerCase();
+    const query = filters.q.trim().toLowerCase();
     result = result.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.brand.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q),
+      (product) =>
+        product.name.toLowerCase().includes(query) ||
+        product.brand?.toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query),
     );
   }
 

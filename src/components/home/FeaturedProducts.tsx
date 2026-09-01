@@ -9,17 +9,17 @@ export function FeaturedProducts({ products }: { products: Product[] }) {
         <div className="mb-10 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-north-steel">
-              Destacados
+              Catálogo
             </p>
             <h2 className="font-display text-3xl font-bold uppercase tracking-[0.04em] text-north-dark md:text-4xl">
-              Selección North Bike
+              Selección del catálogo
             </h2>
           </div>
           <Link
-            href="/products?sort=featured"
+            href="/products"
             className="text-sm font-semibold text-north-primary hover:underline"
           >
-            Ver destacados
+            Ver catálogo
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 md:gap-x-6">

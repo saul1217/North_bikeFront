@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { brands } from "@/lib/data/categories";
 
-export function BrandsBand() {
+export function BrandsBand({ brands }: { brands: string[] }) {
+  if (brands.length === 0) return null;
+
   return (
     <section id="marcas" className="border-y border-north-border bg-white py-14">
       <div className="container-page">
@@ -24,11 +25,11 @@ export function BrandsBand() {
         <div className="grid grid-cols-2 gap-px bg-north-border sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {brands.map((brand) => (
             <Link
-              key={brand.id}
-              href={`/products?brand=${encodeURIComponent(brand.name)}`}
+              key={brand}
+              href={`/products?brand=${encodeURIComponent(brand)}`}
               className="flex h-20 items-center justify-center bg-white px-3 text-center font-display text-sm font-bold uppercase tracking-[0.14em] text-north-dark transition hover:bg-north-background hover:text-north-primary"
             >
-              {brand.name}
+              {brand}
             </Link>
           ))}
         </div>

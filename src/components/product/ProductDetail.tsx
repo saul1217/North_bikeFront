@@ -11,6 +11,7 @@ import { QuantitySelector } from "@/components/ui/QuantitySelector";
 import { Button } from "@/components/ui/Button";
 import { ProductCard } from "@/components/catalog/ProductCard";
 import { categoryLabels } from "@/lib/data/categories";
+import { refreshProduct } from "@/lib/catalog/useProducts";
 
 export function ProductDetail({
   product,
@@ -22,6 +23,8 @@ export function ProductDetail({
   const { addItem } = useCart();
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   const sizeVariants = product.variants.filter((v) => v.type === "size");
   const colorVariants = product.variants.filter((v) => v.type === "color");
@@ -32,10 +35,9 @@ export function ProductDetail({
   const selectedSize = sizeVariants.find((v) => v.value === size);
   const selectedColor = colorVariants.find((v) => v.value === color);
 
-  const maxStock =
-    selectedSize?.stock !== undefined ? selectedSize.stock : product.stock;
-
-  const inStock = maxStock > 0 && product.stock > 0;
+  const maxStock = selectedSize?.stock ?? selectedColor?.stock ?? product.stock;
+  const selectedPrice = selectedSize?.price ?? selectedColor?.price ?? product.price;
+  const inStock = maxStock > 0;
   const onSale = Boolean(
     product.compareAtPrice && product.compareAtPrice > product.price,
   );
@@ -43,21 +45,49 @@ export function ProductDetail({
   const variantLabel = [selectedSize?.label, selectedColor?.label]
     .filter(Boolean)
     .join(" · ");
+  const selectedVariantId = selectedSize?.id ?? selectedColor?.id;
 
-  function handleAdd() {
-    if (!inStock) return;
+  async function handleAdd() {
+    if (!inStock || isAdding) return;
     if (sizeVariants.length && !size) return;
-    addItem({
-      productId: product.id,
-      slug: product.slug,
-      name: product.name,
-      brand: product.brand,
-      image: product.images[0],
-      price: product.price,
-      quantity,
-      variantLabel: variantLabel || undefined,
-      maxStock: Math.max(1, maxStock),
-    });
+    setIsAdding(true);
+    setAddError(null);
+    try {
+      const liveProduct = await refreshProduct(product.id);
+      if (!liveProduct) throw new Error("El producto ya no está disponible.");
+      const liveVariant = liveProduct.variants.find(
+        (variant) =>
+          variant.id === selectedVariantId ||
+          variant.label === selectedSize?.label ||
+          variant.label === selectedColor?.label,
+      );
+      const liveStock = liveVariant?.stock ?? liveProduct.stock;
+      if (liveStock <= 0) {
+        setAddError("Este producto se agotó. Actualiza la página para ver el catálogo.");
+        return;
+      }
+      if (quantity > liveStock) {
+        setQuantity(liveStock);
+        setAddError(`Solo quedan ${liveStock} piezas disponibles.`);
+        return;
+      }
+      addItem({
+        productId: liveProduct.id,
+        slug: liveProduct.slug,
+        name: liveProduct.name,
+        brand: liveProduct.brand,
+        image: liveProduct.images[0] ?? "",
+        price: liveVariant?.price ?? liveProduct.price,
+        variantId: liveVariant?.id ?? selectedVariantId,
+        quantity,
+        variantLabel: variantLabel || undefined,
+        maxStock: liveStock,
+      });
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : "No se pudo validar el inventario.");
+    } finally {
+      setIsAdding(false);
+    }
   }
 
   return (
@@ -77,14 +107,20 @@ export function ProductDetail({
       <div className="grid gap-10 lg:grid-cols-2 lg:gap-14">
         <div>
           <div className="relative mb-3 aspect-[4/5] overflow-hidden bg-north-border md:aspect-square">
-            <Image
-              src={product.images[activeImage] ?? product.images[0]}
-              alt={product.name}
-              fill
-              priority
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 50vw"
-            />
+            {product.images[0] ? (
+              <Image
+                src={product.images[activeImage] ?? product.images[0]}
+                alt={product.name}
+                fill
+                priority
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-north-steel">
+                Imagen no disponible
+              </div>
+            )}
           </div>
           {product.images.length > 1 && (
             <div className="grid grid-cols-4 gap-2">
@@ -119,23 +155,27 @@ export function ProductDetail({
             <Badge tone="muted">{inStock ? "En stock" : "Agotado"}</Badge>
           </div>
 
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-north-steel">
-            {product.brand}
-          </p>
+          {product.brand && (
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-north-steel">
+              {product.brand}
+            </p>
+          )}
           <h1 className="mt-2 font-display text-3xl font-bold uppercase leading-tight tracking-[0.03em] text-north-dark md:text-4xl">
             {product.name}
           </h1>
 
           <Price
-            price={product.price}
+            price={selectedPrice}
             compareAtPrice={product.compareAtPrice}
             size="lg"
             className="mt-4"
           />
 
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-north-muted">
-            {product.description}
-          </p>
+          {product.description && (
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-north-muted">
+              {product.description}
+            </p>
+          )}
 
           {sizeVariants.length > 0 && (
             <div className="mt-8">
@@ -202,12 +242,18 @@ export function ProductDetail({
             <Button
               size="lg"
               className="min-w-[12rem] flex-1 sm:flex-none"
-              disabled={!inStock}
+              disabled={!inStock || isAdding}
               onClick={handleAdd}
             >
-              {inStock ? "Agregar al carrito" : "Agotado"}
+              {isAdding ? "Validando…" : inStock ? "Agregar al carrito" : "Agotado"}
             </Button>
           </div>
+
+          {addError && (
+            <p className="mt-3 text-sm text-red-700" role="alert">
+              {addError}
+            </p>
+          )}
 
           {product.compatibility && (
             <div className="mt-8 border border-north-border bg-north-background p-4">
@@ -227,9 +273,15 @@ export function ProductDetail({
           <h2 className="mb-4 font-display text-2xl font-bold uppercase tracking-[0.06em]">
             Descripción
           </h2>
-          <p className="text-base leading-relaxed text-north-muted">
-            {product.description}
-          </p>
+          {product.description ? (
+            <p className="text-base leading-relaxed text-north-muted">
+              {product.description}
+            </p>
+          ) : (
+            <p className="text-sm text-north-muted">
+              Descripción no disponible en el catálogo.
+            </p>
+          )}
           {product.features.length > 0 && (
             <>
               <h3 className="mb-3 mt-8 text-xs font-semibold uppercase tracking-[0.16em] text-north-steel">
