@@ -32,11 +32,13 @@ function FiltersForm({
   values,
   onChange,
   onClear,
+  radioGroupId,
 }: {
   products: Product[];
   values: CatalogFilters;
   onChange: (patch: Partial<CatalogFilters>) => void;
   onClear: () => void;
+  radioGroupId: string;
 }) {
   const brands = useMemo(() => getUniqueBrands(products), [products]);
   const sizes = useMemo(() => getAvailableSizes(products), [products]);
@@ -67,22 +69,24 @@ function FiltersForm({
             <label key={cat} className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
-                name="category"
+                name={`category-${radioGroupId}`}
                 checked={(values.category ?? "") === cat}
                 onChange={() => onChange({ category: cat })}
-                className="accent-north-primary"
+                className="peer sr-only"
               />
+              <span aria-hidden="true" className="h-4 w-4 shrink-0 rounded-full border-2 border-north-steel transition peer-checked:border-north-primary peer-checked:bg-north-primary peer-checked:shadow-[inset_0_0_0_3px_white]" />
               {categoryLabels[cat] ?? cat}
             </label>
           ))}
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input
               type="radio"
-              name="category"
+              name={`category-${radioGroupId}`}
               checked={!values.category}
               onChange={() => onChange({ category: undefined })}
-              className="accent-north-primary"
+              className="peer sr-only"
             />
+            <span aria-hidden="true" className="h-4 w-4 shrink-0 rounded-full border-2 border-north-steel transition peer-checked:border-north-primary peer-checked:bg-north-primary peer-checked:shadow-[inset_0_0_0_3px_white]" />
             Todas
           </label>
         </div>
@@ -97,7 +101,7 @@ function FiltersForm({
             <label key={brand} className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
-                name="brand"
+                name={`brand-${radioGroupId}`}
                 checked={(values.brand ?? "") === brand}
                 onChange={() => onChange({ brand })}
                 className="accent-north-primary"
@@ -108,7 +112,7 @@ function FiltersForm({
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input
               type="radio"
-              name="brand"
+              name={`brand-${radioGroupId}`}
               checked={!values.brand}
               onChange={() => onChange({ brand: undefined })}
               className="accent-north-primary"
@@ -187,7 +191,7 @@ function FiltersForm({
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input
               type="radio"
-              name="availability"
+              name={`availability-${radioGroupId}`}
               checked={(values.availability ?? "all") === "all"}
               onChange={() => onChange({ availability: "all" })}
               className="accent-north-primary"
@@ -197,7 +201,7 @@ function FiltersForm({
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <input
               type="radio"
-              name="availability"
+              name={`availability-${radioGroupId}`}
               checked={values.availability === "in-stock"}
               onChange={() => onChange({ availability: "in-stock" })}
               className="accent-north-primary"
@@ -321,6 +325,7 @@ export function CatalogView({ products }: Props) {
               values={values}
               onChange={patch}
               onClear={clear}
+              radioGroupId="desktop"
             />
           </div>
         </aside>
@@ -388,6 +393,7 @@ export function CatalogView({ products }: Props) {
               values={values}
               onChange={patch}
               onClear={clear}
+              radioGroupId="mobile"
             />
           </div>
           <div className="border-t border-north-border p-4">

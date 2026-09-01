@@ -16,6 +16,14 @@ const initialAddress = {
   postalCode: "",
 };
 
+function sanitizePhone(value: string) {
+  const filtered = value.replace(/[^\d+()\s.-]/g, "");
+  if (!filtered.includes("+")) return filtered;
+  return filtered.startsWith("+")
+    ? `+${filtered.slice(1).replace(/\+/g, "")}`
+    : filtered.replace(/\+/g, "");
+}
+
 export default function CheckoutPage() {
   const { items, subtotal } = useCart();
   const [searchParams] = useSearchParams();
@@ -49,6 +57,12 @@ export default function CheckoutPage() {
     if (items.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
     setError(null);
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+      setError("Escribe un número telefónico válido de entre 7 y 15 dígitos.");
+      setIsSubmitting(false);
+      return;
+    }
     try {
       const session = await createCheckoutSession({
         items: items.map((item) => ({
@@ -104,7 +118,7 @@ export default function CheckoutPage() {
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
                   <label className="text-sm font-semibold text-north-dark md:col-span-2">Nombre completo<input required value={name} onChange={(e) => setName(e.target.value)} className="mt-2 h-11 w-full border border-north-border bg-north-background px-3 font-normal outline-none focus:border-north-primary" autoComplete="name" /></label>
                   <label className="text-sm font-semibold text-north-dark">Correo electrónico<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-2 h-11 w-full border border-north-border bg-north-background px-3 font-normal outline-none focus:border-north-primary" autoComplete="email" /></label>
-                  <label className="text-sm font-semibold text-north-dark">Teléfono<input required value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-2 h-11 w-full border border-north-border bg-north-background px-3 font-normal outline-none focus:border-north-primary" autoComplete="tel" /></label>
+                  <label className="text-sm font-semibold text-north-dark">Teléfono<input required type="tel" inputMode="tel" pattern="^\+?[0-9\s\(\)\.\-]{7,30}$" maxLength={30} value={phone} onChange={(e) => setPhone(sanitizePhone(e.target.value))} placeholder="+52 614 123 4567" className="mt-2 h-11 w-full border border-north-border bg-north-background px-3 font-normal outline-none focus:border-north-primary" autoComplete="tel" /></label>
                 </div>
               </div>
             </div>
