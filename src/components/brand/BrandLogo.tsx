@@ -6,20 +6,22 @@ type BrandLogoProps = {
   className?: string;
 };
 
-export function BrandLogo({ className = "" }: BrandLogoProps) {
+export function BrandLogo({ variant = "dark", className = "" }: BrandLogoProps) {
   return (
     <Link
       href="/"
-      className={`inline-flex shrink-0 items-center ${className}`}
+      className={`inline-flex shrink-0 items-center ${
+        variant === "light" ? "bg-white p-1" : ""
+      } ${className}`}
       aria-label="North Bike — inicio"
     >
       <Image
-        src="/brand/logo.png"
+        src="/brand/logo.webp"
         alt="North Bike"
-        width={160}
-        height={160}
+        width={384}
+        height={384}
         priority
-        className="h-10 w-10 object-contain md:h-12 md:w-12"
+        className="h-12 w-12 object-contain md:h-14 md:w-14"
       />
     </Link>
   );
