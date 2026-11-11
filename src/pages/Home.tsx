@@ -5,16 +5,17 @@ import { EditorialBlock } from "@/components/home/EditorialBlock";
 import { CollectionStrip } from "@/components/home/CollectionStrip";
 import { BrandsBand } from "@/components/home/BrandsBand";
 import { AdviceCTA } from "@/components/home/AdviceCTA";
-import { CatalogEmpty, CatalogError, CatalogLoading } from "@/components/catalog/CatalogStatus";
+import { CatalogEmpty, CatalogError, CatalogLoading, CatalogPartialNotice } from "@/components/catalog/CatalogStatus";
 import { filterProducts, getUniqueBrands } from "@/lib/catalog/filters";
 import { useProducts } from "@/lib/catalog/useProducts";
 import { ApiRequestError } from "@/lib/api/types";
 
 export default function Home() {
-  const { products, isLoading, error } = useProducts();
+  const { products, failedSources, isLoading, error } = useProducts();
 
   if (isLoading) return <CatalogLoading />;
   if (error) return <><HomeHero /><CatalogError message={error.message} status={error instanceof ApiRequestError ? error.status : undefined} /></>;
+  if (products.length === 0 && failedSources.length > 0) return <><HomeHero /><CatalogError message="Una de las fuentes del catálogo no respondió y la otra no tiene productos publicados." /></>;
   if (products.length === 0) return <><HomeHero /><CatalogEmpty /></>;
 
   const featuredMatches = filterProducts(products, { sort: "featured" }).filter((product) => product.featured);
@@ -28,6 +29,7 @@ export default function Home() {
   return (
     <>
       <HomeHero />
+      <CatalogPartialNotice failedSources={failedSources} />
       <CategoryEntry />
       <FeaturedProducts products={featured} />
       {offers.length > 0 && <CollectionStrip title="Rodada con precio especial" subtitle="Ofertas" href="/products?onSale=1" products={offers} />}

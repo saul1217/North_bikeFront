@@ -14,8 +14,17 @@ export type ApiProductVariant = {
   model?: string | null;
 };
 
+/**
+ * Origen del inventario de un producto de la tienda en línea.
+ * - "pos": catálogo del POS publicado con onlineEnabled (GET /api/products).
+ * - "manual": producto que solo existe en la tienda (GET /api/online-products).
+ * Un dato sin origen (carritos o respuestas anteriores) se trata como "pos".
+ */
+export type ProductSource = "pos" | "manual";
+
 export type ApiProduct = {
   id: string;
+  source?: ProductSource;
   sku: string;
   name: string;
   category: string;
@@ -75,6 +84,8 @@ export type EcommerceFulfillmentStatus =
 
 export type AdminOrderItem = {
   id: string;
+  /** Presente con el backend de dos modos; sin dato es "pos". */
+  inventorySource?: ProductSource;
   productId: string;
   variantId: string | null;
   sku: string;
@@ -133,20 +144,19 @@ export type AdminSummaryResponse = {
   }>;
 };
 
+export type CheckoutRequestItem = {
+  productId: string;
+  variantId?: string;
+  quantity: number;
+  /** Solo se envía para productos manuales; sin dato el backend asume "pos". */
+  source?: "manual";
+};
+
 export type CheckoutRequest = {
-  items: Array<{ productId: string; variantId?: string; quantity: number }>;
+  items: CheckoutRequestItem[];
   customer: { name: string; email: string; phone: string };
-  fulfillment: {
-    method: "pickup" | "shipping";
-    address?: {
-      line1: string;
-      line2?: string;
-      city: string;
-      state: string;
-      postalCode: string;
-      country?: string;
-    };
-  };
+  /** North Bike solo entrega en tienda: el backend rechaza "shipping" con 400 (#82). */
+  fulfillment: { method: "pickup" };
 };
 
 export type CheckoutSessionResponse = {

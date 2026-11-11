@@ -1,5 +1,6 @@
 "use client";
 
+import { productKey } from "@/lib/catalog/adapter";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
@@ -353,7 +354,7 @@ export function CatalogView({ products }: Props) {
           ) : (
             <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 md:gap-x-6">
               {filtered.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={productKey(product)} product={product} />
               ))}
             </div>
           )}

@@ -9,6 +9,13 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // Scripts de QA que corren en Node con Playwright (y evalúan código en el navegador).
+    files: ["qa/**/*.mjs"],
+    languageOptions: {
+      globals: { process: "readonly", console: "readonly", fetch: "readonly", window: "readonly", document: "readonly", localStorage: "readonly", PopStateEvent: "readonly", Buffer: "readonly", URL: "readonly" },
+    },
+  },
+  {
     plugins: {
       "react-hooks": reactHooks,
     },

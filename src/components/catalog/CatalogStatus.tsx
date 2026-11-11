@@ -55,3 +55,18 @@ export function CatalogEmpty() {
     </div>
   );
 }
+
+const sourceNames = { pos: "productos de la tienda física", manual: "productos exclusivos en línea" } as const;
+
+/** Una de las dos fuentes del catálogo falló: se avisa y solo se muestra lo que sí cargó. */
+export function CatalogPartialNotice({ failedSources }: { failedSources: Array<"pos" | "manual"> }) {
+  if (failedSources.length === 0) return null;
+  return (
+    <div className="container-page pt-6">
+      <p role="status" className="flex items-start gap-2 border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+        No pudimos cargar los {failedSources.map((source) => sourceNames[source]).join(" ni los ")}. Mostramos solo el resto del catálogo; inténtalo de nuevo en unos minutos.
+      </p>
+    </div>
+  );
+}

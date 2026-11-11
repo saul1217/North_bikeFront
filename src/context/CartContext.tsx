@@ -12,11 +12,14 @@ import {
 import {
   calcItemCount,
   calcSubtotal,
+  cartLineKey,
   loadCart,
   saveCart,
   type CartItem,
+  type CartLineRef,
 } from "@/lib/cart/storage";
-import { loadProducts } from "@/lib/catalog/useProducts";
+import { productKey } from "@/lib/catalog/adapter";
+import { loadCatalog } from "@/lib/catalog/useProducts";
 
 type AddItemInput = Omit<CartItem, "quantity"> & { quantity?: number };
 
@@ -29,21 +32,14 @@ type CartContextValue = {
   closeCart: () => void;
   toggleCart: () => void;
   addItem: (item: AddItemInput) => void;
-  removeItem: (productId: string, variantLabel?: string, variantId?: string) => void;
-  setQuantity: (
-    productId: string,
-    quantity: number,
-    variantLabel?: string,
-    variantId?: string,
-  ) => void;
+  removeItem: (line: CartLineRef) => void;
+  setQuantity: (line: CartLineRef, quantity: number) => void;
+  /** Reemplaza las líneas tras revalidarlas (por ejemplo, después de un 409 del checkout). */
+  replaceItems: (items: CartItem[]) => void;
   clearCart: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-
-function itemKey(productId: string, variantId?: string, variantLabel?: string) {
-  return `${productId}::${variantId ?? variantLabel ?? ""}`;
-}
 
 type Store = {
   items: CartItem[];
@@ -86,12 +82,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    loadProducts()
-      .then((products) => {
+    loadCatalog()
+      .then(({ products, failedSources }) => {
         if (cancelled || store.items.length === 0) return;
-        const byId = new Map(products.map((product) => [product.id, product]));
+        const byKey = new Map(products.map((product) => [productKey(product), product]));
         const nextItems = store.items.flatMap((item) => {
-          const product = byId.get(item.productId);
+          // Si la fuente de este artículo no respondió, se conserva tal cual.
+          if (failedSources.includes(item.source)) return [item];
+          const product = byKey.get(productKey({ id: item.productId, source: item.source }));
           if (!product) return [];
           const labels = item.variantLabel?.split(" · ") ?? [];
           const variant = item.variantId
@@ -132,14 +130,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback((input: AddItemInput) => {
     const qty = input.quantity ?? 1;
-    const key = itemKey(input.productId, input.variantId, input.variantLabel);
+    const key = cartLineKey(input);
     const prev = store.items;
-    const existing = prev.find(
-      (i) => itemKey(i.productId, i.variantId, i.variantLabel) === key,
-    );
+    const existing = prev.find((i) => cartLineKey(i) === key);
     const items = existing
       ? prev.map((i) =>
-          itemKey(i.productId, i.variantId, i.variantLabel) === key
+          cartLineKey(i) === key
             ? {
                 ...i,
                 quantity: Math.min(i.maxStock, i.quantity + qty),
@@ -156,32 +152,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setStore({ items, isOpen: true });
   }, []);
 
-  const removeItem = useCallback((productId: string, variantLabel?: string, variantId?: string) => {
-    const key = itemKey(productId, variantId, variantLabel);
-    setStore({
-      items: store.items.filter(
-        (i) => itemKey(i.productId, i.variantId, i.variantLabel) !== key,
-      ),
-    });
+  const removeItem = useCallback((line: CartLineRef) => {
+    const key = cartLineKey(line);
+    setStore({ items: store.items.filter((i) => cartLineKey(i) !== key) });
   }, []);
 
-  const setQuantity = useCallback(
-    (productId: string, quantity: number, variantLabel?: string, variantId?: string) => {
-      const key = itemKey(productId, variantId, variantLabel);
-      const items =
-        quantity <= 0
-          ? store.items.filter(
-              (i) => itemKey(i.productId, i.variantId, i.variantLabel) !== key,
-            )
-          : store.items.map((i) =>
-              itemKey(i.productId, i.variantId, i.variantLabel) === key
-                ? { ...i, quantity: Math.min(i.maxStock, quantity) }
-                : i,
-            );
-      setStore({ items });
-    },
-    [],
-  );
+  const setQuantity = useCallback((line: CartLineRef, quantity: number) => {
+    const key = cartLineKey(line);
+    const items =
+      quantity <= 0
+        ? store.items.filter((i) => cartLineKey(i) !== key)
+        : store.items.map((i) =>
+            cartLineKey(i) === key
+              ? { ...i, quantity: Math.min(i.maxStock, quantity) }
+              : i,
+          );
+    setStore({ items });
+  }, []);
+
+  const replaceItems = useCallback((items: CartItem[]) => setStore({ items }), []);
 
   const clearCart = useCallback(() => setStore({ items: [] }), []);
 
@@ -197,6 +186,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       addItem,
       removeItem,
       setQuantity,
+      replaceItems,
       clearCart,
     }),
     [
@@ -208,6 +198,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       addItem,
       removeItem,
       setQuantity,
+      replaceItems,
       clearCart,
     ],
   );
