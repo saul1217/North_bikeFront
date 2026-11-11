@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Minus, Plus, Trash2, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { cartLineKey } from "@/lib/cart/storage";
 import { formatPrice } from "@/lib/catalog/filters";
 import { Button } from "@/components/ui/Button";
 
@@ -81,7 +82,7 @@ export function CartDrawer() {
             <ul className="space-y-5">
               {items.map((item) => (
                 <li
-                  key={`${item.productId}-${item.variantId ?? item.variantLabel ?? "default"}`}
+                  key={cartLineKey(item)}
                   className="flex gap-3 border-b border-north-border pb-5"
                 >
                   <Link
@@ -114,9 +115,7 @@ export function CartDrawer() {
                       </div>
                       <button
                         type="button"
-                        onClick={() =>
-                          removeItem(item.productId, item.variantLabel, item.variantId)
-                        }
+                        onClick={() => removeItem(item)}
                         className="p-1 text-north-muted hover:text-north-dark"
                         aria-label="Eliminar"
                       >
@@ -128,14 +127,7 @@ export function CartDrawer() {
                         <button
                           type="button"
                           className="flex h-full w-8 items-center justify-center hover:bg-north-background"
-                          onClick={() =>
-                            setQuantity(
-                              item.productId,
-                              item.quantity - 1,
-                              item.variantLabel,
-                              item.variantId,
-                            )
-                          }
+                          onClick={() => setQuantity(item, item.quantity - 1)}
                           aria-label="Disminuir"
                         >
                           <Minus className="h-3.5 w-3.5" />
@@ -147,14 +139,7 @@ export function CartDrawer() {
                           type="button"
                           className="flex h-full w-8 items-center justify-center hover:bg-north-background disabled:opacity-40"
                           disabled={item.quantity >= item.maxStock}
-                          onClick={() =>
-                            setQuantity(
-                              item.productId,
-                              item.quantity + 1,
-                              item.variantLabel,
-                              item.variantId,
-                            )
-                          }
+                          onClick={() => setQuantity(item, item.quantity + 1)}
                           aria-label="Aumentar"
                         >
                           <Plus className="h-3.5 w-3.5" />
