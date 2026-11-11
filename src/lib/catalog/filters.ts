@@ -102,6 +102,9 @@ export function formatPrice(amount: number): string {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
-    maximumFractionDigits: 0,
+    // Centavos solo cuando existen: el total mostrado debe ser el que cobra
+    // Stripe (899.50 no puede verse como $900).
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
   }).format(amount);
 }
