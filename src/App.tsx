@@ -15,6 +15,7 @@ import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
 import AdminOrdersPage from "@/pages/AdminOrdersPage";
 import AdminOrderDetailPage from "@/pages/AdminOrderDetailPage";
+import AdminProductsPage from "@/pages/AdminProductsPage";
 
 function ScrollToTop() {
   const { pathname, search } = useLocation();
@@ -55,6 +56,7 @@ export function App() {
                 <Route index element={<AdminDashboardPage />} />
                 <Route path="orders" element={<AdminOrdersPage />} />
                 <Route path="orders/:id" element={<AdminOrderDetailPage />} />
+                <Route path="products" element={<AdminProductsPage />} />
               </Route>
             </Route>
           </Routes>
