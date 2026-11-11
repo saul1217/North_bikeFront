@@ -21,7 +21,8 @@ Solo se aceptan variables públicas `VITE_*`. No agregues credenciales de base d
 
 ## Integración actual
 
-- `GET /api/products` es la única ruta de catálogo usada por el frontend.
+- El catálogo une `GET /api/products` (productos del POS publicados, `source: "pos"`) y `GET /api/online-products` (productos manuales publicados, `source: "manual"`). El origen lo decide la ruta. Si `/online-products` responde 404 (backend sin los dos modos) se toma como catálogo manual vacío; si una fuente falla se muestra la otra con un aviso.
+- `source` es parte de la identidad del producto en el carrito (`northbike-cart`). Un carrito guardado sin `source` se lee como `pos`.
 - La respuesta se valida y se adapta en `src/lib/catalog/adapter.ts`.
 - Precio, stock, variantes e imágenes se toman del backend. El slug de navegación se deriva localmente de `name + id` porque el backend no expone `slug`.
 - El catálogo, la página de detalle y el home tienen estados de carga, error y vacío.
@@ -37,6 +38,13 @@ Sólo los usuarios con rol `admin` pueden entrar. La sesión se conserva en
 - `/admin` muestra ingresos, pedidos pagados, unidades, ticket promedio y los 10 productos más vendidos.
 - `/admin/orders` permite buscar por folio, cliente o correo, filtrar pago, logística, método de entrega y fechas, y paginar a 25 pedidos.
 - `/admin/orders/:id` muestra el detalle y permite avanzar únicamente el siguiente estado logístico válido para pickup o envío.
+
+- `/admin/products` («Productos online») tiene dos pestañas:
+  - **Sincronizados con el POS**: lista de `GET /api/admin/ecommerce/products` con búsqueda, filtros y paginación. Solo cambia «Disponible en tienda online» con `PATCH /api/admin/ecommerce/products/:id/online`; el cambio se muestra únicamente con la respuesta 200. Muestra los avisos `onlineRisks` (`serialized`, `low_stock`) como pendientes para LIVE.
+  - **Manuales / Solo tienda online**: alta, edición parcial (solo los campos cambiados), publicación, retiro lógico con confirmación y SKU duplicado (409) con las rutas `/api/admin/ecommerce/manual-products`. Imágenes por URL https o con la subida existente `POST /api/uploads/product-image`.
+- El detalle de pedidos marca cada línea como sincronizada o manual (`inventorySource`). El total mostrado es el de `ecommerce_orders`; en pedidos mixtos se aclara que la venta de caja solo incluye la parte del POS.
+
+Todo esto requiere el backend de los dos modos (NorthBike_back PR #2).
 
 El panel no contiene claves de Stripe, no modifica pagos ni realiza reembolsos.
 Las métricas sólo consideran órdenes ecommerce con pago confirmado.
@@ -69,6 +77,19 @@ ruta autenticada del POS.
 ```bash
 npm run build
 npm run lint
+npm test
+```
+
+### Prueba E2E local
+
+`qa/e2e-dos-modos.mjs` recorre el panel, la tienda, el carrito y el checkout
+contra el backend del PR #2 levantado en local con Postgres (base `vtest77`,
+usuarios `admin` y `cajero77`, datos de `prisma/seed.ts`). El checkout exitoso
+se simula en el navegador para no llamar a Stripe; los 409 sí van al backend.
+
+```bash
+npm i --no-save playwright@1.63.0
+FRONT=http://127.0.0.1:<puerto-front> API=http://127.0.0.1:<puerto-api>/api DB=vtest77 node qa/e2e-dos-modos.mjs /tmp/capturas
 ```
 
 La API debe permitir explícitamente el origen desde el que se sirva este
