@@ -80,3 +80,21 @@ describe("catálogo con dos fuentes", () => {
     await expect(loadCatalog()).rejects.toThrow();
   });
 });
+
+describe("catálogo en memoria (#78)", () => {
+  it("al volver a montar la tienda se vuelve a pedir el catálogo y refleja lo publicado", async () => {
+    let published = ["cmx1"];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      const path = new URL(url).pathname.replace(/^\/api/, "");
+      const body = path === "/products" ? published.map((id) => apiProduct(id)) : [];
+      return new Response(JSON.stringify(body), { status: 200 });
+    }));
+    const { loadCatalog } = await freshModule();
+    expect((await loadCatalog()).products.map((product) => product.id)).toEqual(["cmx1"]);
+    published = ["cmx1", "cmx2"];
+    // Sin force, la segunda carga sale de la memoria (comportamiento anterior).
+    expect((await loadCatalog()).products.map((product) => product.id)).toEqual(["cmx1"]);
+    // Con force (lo que hace useProducts al montarse con caché), sale lo nuevo.
+    expect((await loadCatalog({ force: true })).products.map((product) => product.id)).toEqual(["cmx1", "cmx2"]);
+  });
+});

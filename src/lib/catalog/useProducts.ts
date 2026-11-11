@@ -66,14 +66,19 @@ export function useProducts() {
 
   useEffect(() => {
     let active = true;
-    loadCatalog()
+    // Con catálogo en memoria se muestra de inmediato, pero se vuelve a pedir
+    // al servidor: si el panel publicó o retiró algo en esta misma pestaña, la
+    // tienda no debe quedarse con la lista vieja hasta recargar la página.
+    const hadCache = cachedCatalog !== null;
+    loadCatalog({ force: hadCache })
       .then((catalog) => {
         if (active) {
           setState({ products: catalog.products, failedSources: catalog.failedSources, isLoading: false, error: null });
         }
       })
       .catch((error: unknown) => {
-        if (active) {
+        // Si falla la revalidación, se conserva lo que ya se mostraba.
+        if (active && !hadCache) {
           setState({
             products: [],
             failedSources: [],
