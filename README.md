@@ -37,7 +37,7 @@ Sólo los usuarios con rol `admin` pueden entrar. La sesión se conserva en
 
 - `/admin` muestra ingresos, pedidos pagados, unidades, ticket promedio y los 10 productos más vendidos.
 - `/admin/orders` permite buscar por folio, cliente o correo, filtrar pago, logística, método de entrega y fechas, y paginar a 25 pedidos.
-- `/admin/orders/:id` muestra el detalle y permite avanzar únicamente el siguiente estado logístico válido para pickup o envío.
+- `/admin/orders/:id` muestra el detalle y permite avanzar únicamente el siguiente estado logístico válido (recoger en tienda; los pedidos históricos con envío, si existen, se siguen mostrando).
 
 - `/admin/products` («Productos online») tiene dos pestañas:
   - **Sincronizados con el POS**: lista de `GET /api/admin/ecommerce/products` con búsqueda, filtros y paginación. Solo cambia «Disponible en tienda online» con `PATCH /api/admin/ecommerce/products/:id/online`; el cambio se muestra únicamente con la respuesta 200. Muestra los avisos `onlineRisks` (`serialized`, `low_stock`) como pendientes para LIVE.
@@ -57,6 +57,9 @@ El checkout real está disponible en `/checkout`. El frontend envía al backend
 únicamente los IDs de productos/variantes y cantidades; el backend recalcula
 precios, valida stock, reserva inventario y devuelve una URL de Stripe Checkout
 hospedado. Los datos de tarjeta no llegan al frontend ni al backend North Bike.
+
+North Bike **no hace envíos a domicilio**: la única entrega es «Recoger en
+tienda» y el checkout no pide dirección ni cobra envío (ver `docs/entrega.md`).
 
 La página de éxito consulta `/api/orders/:id/status` y sólo limpia el carrito
 cuando un webhook firmado confirma el estado `paid`. Si el cliente cancela o
