@@ -1,3 +1,4 @@
+import { productKey } from "@/lib/catalog/adapter";
 import Link from "next/link";
 import { ProductCard } from "@/components/catalog/ProductCard";
 import type { Product } from "@/lib/types/product";
@@ -24,7 +25,7 @@ export function FeaturedProducts({ products }: { products: Product[] }) {
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4 md:gap-x-6">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={productKey(product)} product={product} />
           ))}
         </div>
       </div>

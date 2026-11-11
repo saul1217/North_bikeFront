@@ -15,19 +15,33 @@ function isApiProduct(value: unknown): value is ApiProduct {
   );
 }
 
-export async function fetchProducts(options?: {
-  signal?: AbortSignal;
-}): Promise<ApiProduct[]> {
-  const payload = await apiRequest<unknown>("/products", {
-    signal: options?.signal,
-    cache: "no-store",
-  });
+async function fetchCatalog(path: string, label: string, signal?: AbortSignal) {
+  const payload = await apiRequest<unknown>(path, { signal, cache: "no-store" });
 
   if (!Array.isArray(payload) || !payload.every(isApiProduct)) {
-    throw new ApiRequestError("La API de productos devolvió una respuesta no válida.", {
+    throw new ApiRequestError(`La API de ${label} devolvió una respuesta no válida.`, {
       kind: "invalid-response",
     });
   }
 
   return payload;
+}
+
+/** Productos del POS publicados (`source: "pos"`). */
+export function fetchProducts(options?: { signal?: AbortSignal }): Promise<ApiProduct[]> {
+  return fetchCatalog("/products", "productos", options?.signal);
+}
+
+/**
+ * Productos manuales publicados (`source: "manual"`). Un backend sin el modo
+ * manual responde 404: se toma como catálogo manual vacío para que la tienda
+ * siga funcionando igual que antes.
+ */
+export async function fetchOnlineProducts(options?: { signal?: AbortSignal }): Promise<ApiProduct[]> {
+  try {
+    return await fetchCatalog("/online-products", "productos en línea", options?.signal);
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 404) return [];
+    throw error;
+  }
 }
