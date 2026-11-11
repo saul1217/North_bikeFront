@@ -45,3 +45,30 @@ export function nextFulfillmentStatuses(order: AdminOrder) {
   const next = flow[flow.indexOf(order.fulfillmentStatus) + 1];
   return next ? [next] : [];
 }
+
+export type OrderComposition = "pos" | "manual" | "mixed";
+
+export function itemSource(item: { inventorySource?: string | null }) {
+  return item.inventorySource === "manual" ? "manual" : "pos";
+}
+
+export function orderComposition(order: Pick<AdminOrder, "items">): OrderComposition {
+  const sources = new Set(order.items.map(itemSource));
+  if (sources.size > 1) return "mixed";
+  return sources.has("manual") ? "manual" : "pos";
+}
+
+export const compositionLabels: Record<OrderComposition, string> = {
+  pos: "Sincronizado POS",
+  manual: "Manual",
+  mixed: "Mixto",
+};
+
+/**
+ * Importe de las líneas del POS: es lo que el backend registra como venta de
+ * caja en un pedido pagado. Solo es informativo; el total cobrado es
+ * `order.total` (ecommerce_orders) y no se suman ambas cifras.
+ */
+export function posLinesTotal(order: Pick<AdminOrder, "items">) {
+  return Math.round(order.items.filter((item) => itemSource(item) === "pos").reduce((sum, item) => sum + item.lineTotal * 100, 0)) / 100;
+}
