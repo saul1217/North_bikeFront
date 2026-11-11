@@ -99,6 +99,7 @@ export function SyncedProductsPanel() {
             <li key={risk}><strong>{riskLabels[risk].title}:</strong> {riskLabels[risk].detail}</li>
           ))}
         </ul>
+        <p className="mt-2"><strong>Lanzamiento con cobro real (LIVE): los productos sincronizados no se pueden comprar</strong> mientras no se autorice; el servidor rechaza el pago aunque estén publicados. Para la primera etapa vende con productos manuales.</p>
         <p className="mt-2">Los avisos no son una protección automática: los productos marcados quedan <strong>pendientes de revisión antes de vender con cobro real (LIVE)</strong>.</p>
       </div>
 

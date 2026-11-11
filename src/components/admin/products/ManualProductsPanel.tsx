@@ -121,6 +121,7 @@ export function ManualProductsPanel() {
       <div>
         <p className="font-semibold">{MANUAL_STOCK_NOTICE}</p>
         <p className="mt-1">Estos productos solo existen en la tienda online y nunca aparecen en el POS. Si también vendes la pieza en mostrador, ajusta aquí la existencia a mano para evitar sobreventa.</p>
+        <p className="mt-1">Esto depende de tu control: el sistema no descuenta las ventas de mostrador ni evita por sí solo la sobreventa. Lo más seguro es apartar piezas solo para la tienda online.</p>
       </div>
     </div>
   );
