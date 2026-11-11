@@ -1,0 +1,300 @@
+From 5db38ebfd72c8479524133465d9cbd55a36ba999 Mon Sep 17 00:00:00 2001
+From: David R <winkakao3@gmail.com>
+Date: Wed, 11 Nov 2026 05:28:11 +0000
+Subject: [PATCH] =?UTF-8?q?fix(checkout):=20shipping=20siempre=20da=20400?=
+ =?UTF-8?q?=20y=20se=20retira=20ECOMMERCE=5FSHIPPING=5FENABLED=20porque=20?=
+ =?UTF-8?q?North=20Bike=20no=20hace=20env=C3=ADos=20a=20domicilio?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Decisión definitiva del propietario (#82). El rechazo ocurre antes de apartar stock, crear la orden o abrir Stripe. Los pedidos históricos con shipping no se tocan.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .env.example                      |  3 ---
+ docs/tienda-online-publicacion.md | 18 ++++++++++++----
+ docs/validacion-pre-live-78.md    | 30 ++++++++++++++++++++-------
+ qa/pre-live-78/README.md          |  2 +-
+ qa/pre-live-78/e2e-backend.ts     | 10 ++-------
+ src/checkout/checkout-rules.ts    |  9 --------
+ src/checkout/checkout.service.ts  | 13 +++++-------
+ test/launch-restrictions.spec.ts  | 34 +++++++++++++------------------
+ 8 files changed, 59 insertions(+), 60 deletions(-)
+
+diff --git a/.env.example b/.env.example
+index fcfa2cc..fd9f0d0 100644
+--- a/.env.example
++++ b/.env.example
+@@ -40,9 +40,6 @@ STRIPE_SUCCESS_URL="http://localhost:5173/checkout/success"
+ STRIPE_CANCEL_URL="http://localhost:5173/checkout"
+ # LIVE keys (sk_live_/rk_live_) are refused unless this is "true". Only with approval.
+ STRIPE_LIVE_ENABLED="false"
+-# Envío a domicilio. Apagado: el checkout solo acepta "pickup" (400 a "shipping").
+-# Encender solo cuando el propietario defina costos, zonas y reglas de envío.
+-ECOMMERCE_SHIPPING_ENABLED="false"
+ # Con llave LIVE, los productos del POS (source "pos") no se pueden comprar
+ # mientras esto no sea "true" (riesgos R1/R2/R5). Con llave TEST no aplica.
+ ECOMMERCE_POS_LIVE_ENABLED="false"
+diff --git a/docs/tienda-online-publicacion.md b/docs/tienda-online-publicacion.md
+index 9c0b0a2..36443c1 100644
+--- a/docs/tienda-online-publicacion.md
++++ b/docs/tienda-online-publicacion.md
+@@ -257,19 +257,29 @@ Una llave `sk_live_…`/`rk_live_…` se rechaza (503 al crear la sesión) mient
+    `checkout.session.async_payment_failed`.
+ 3. En Railway producción: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+    `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL` de la tienda real y
+-   `STRIPE_LIVE_ENABLED=true`. Dejar `ECOMMERCE_SHIPPING_ENABLED` y
+-   `ECOMMERCE_POS_LIVE_ENABLED` sin definir (o en `false`).
++   `STRIPE_LIVE_ENABLED=true`. Dejar `ECOMMERCE_POS_LIVE_ENABLED` sin definir
++   (o en `false`).
+ 4. Hacer una compra real de monto bajo y reembolsarla.
+ 5. Resolver o aceptar por escrito los bloqueos de inventario de abajo.
+ 
++### Entrega: solo recoger en tienda (decisión definitiva, #82)
++
++North Bike **no hace envíos a domicilio**. La única entrega de las compras en
++línea es recoger en tienda (`fulfillment.method = "pickup"`). `POST
++/api/checkout/session` con `"shipping"` responde siempre **400 «North Bike no
++hace envíos a domicilio: las compras en línea se recogen en tienda»**, antes de
++apartar inventario, crear la orden o abrir Stripe. No hay variable que lo
++encienda (`ECOMMERCE_SHIPPING_ENABLED` se retiró y ya no tiene efecto) y no hay
++tarifas, cotizador ni envío gratis. Los pedidos históricos con `shipping`, si
++existen, no se tocan y el panel los sigue mostrando.
++
+ ### Restricciones de la primera etapa (#78)
+ 
+ | Variable | Por defecto | Efecto |
+ |---|---|---|
+-| `ECOMMERCE_SHIPPING_ENABLED` | apagada | Mientras no sea exactamente `true`, `POST /api/checkout/session` con `fulfillment.method = "shipping"` responde **400 «Por ahora solo está disponible recoger en tienda»** antes de apartar inventario o abrir Stripe. Solo se vende con `pickup`. |
+ | `ECOMMERCE_POS_LIVE_ENABLED` | apagada | Con llave LIVE (`sk_live_`/`rk_live_`), cualquier artículo `source: "pos"` (también sin `source`, como los carritos anteriores, o en un pedido mixto) responde **409** nombrando los productos a quitar, sin apartar nada. Con llave TEST no aplica, para poder probar. Encenderla solo con autorización específica y R1/R2/R5 resueltos o aceptados. |
+ 
+-En el front, `VITE_ECOMMERCE_SHIPPING_ENABLED` (apagada) oculta la opción de envío.
++En el front (North_bikeFront, #82) el checkout muestra solo «Recoger en tienda», sin dirección ni renglón de envío, y no hay variable que muestre el envío.
+ 
+ La versión del SDK queda fija en `stripe@22.6.0` (API `2026-08-26.dahlia`): la
+ API `2026-09-30.endive` (stripe 23) quitó `payment_method_types` de Checkout
+diff --git a/docs/validacion-pre-live-78.md b/docs/validacion-pre-live-78.md
+index 361a2b2..797c0b2 100644
+--- a/docs/validacion-pre-live-78.md
++++ b/docs/validacion-pre-live-78.md
+@@ -7,6 +7,22 @@ Fecha: 2026-11-11. Revisado: backend `NorthBike_back` PR #2 (rama
+ 
+ Nada se fusionó, desplegó ni migró fuera de lo local. Stripe LIVE sigue apagado.
+ 
++## Actualización #82: solo recoger en tienda (decisión definitiva)
++
++El propietario confirmó que **North Bike no hace envíos a domicilio**. Esto
++reemplaza la idea de un envío «por confirmar» (#80) y la variable de abajo:
++
++- `shipping` da **siempre 400 «North Bike no hace envíos a domicilio: las
++  compras en línea se recogen en tienda»**, antes de apartar stock, crear orden
++  o abrir Stripe. `ECOMMERCE_SHIPPING_ENABLED` se retiró: aunque valga `true`,
++  sigue en 400 (probado en unitarias y en `e2e-backend.ts`, 96/96).
++- Sin tarifas, cotizador, `shippingCentsFor` ni `SHIPPING_RATE_PENDING`.
++- Los pedidos históricos con `shipping` y el flujo del panel no se tocan.
++- Front: el PR del #82 en North_bikeFront deja solo «Recoger en tienda» fija.
++
++Donde abajo se habla de `ECOMMERCE_SHIPPING_ENABLED` o de `VITE_ECOMMERCE_SHIPPING_ENABLED`,
++es historia de la primera vuelta: ya no existen.
++
+ ## 0. Continuación: decisiones de Kikin aplicadas (NorthBike_78_Decisiones_Continuacion.md)
+ 
+ Autorizado implementar y probar, **no desplegar**. Lo aplicado:
+@@ -41,8 +57,8 @@ sincronizados en LIVE.
+ ## 1. Resultado de la revisión
+ 
+ **Veredicto: el backend y el front son compatibles entre sí y con la caja
+-v0.1.23. NO están listos para LIVE** por tres bloqueos que no son de código:
+-envío a domicilio sin política (sección 3), la prueba con Stripe TEST real y la
++v0.1.23. NO están listos para LIVE** por bloqueos que no son de código (el
++envío a domicilio ya no es uno: no se ofrece, ver #82): la prueba con Stripe TEST real y la
+ subida de imágenes a Storage, que siguen pendientes (sección 2), y la aceptación
+ de las reglas de inventario (sección 4).
+ 
+@@ -164,8 +180,8 @@ tienda no está lista para LIVE mientras eso siga así.**
+ 
+ ### Cambio aplicado (autorizado en la continuación)
+ 
+-Solo «Recoger en tienda» hasta que el propietario defina costos, cobertura,
+-política y plazos. Quedó así:
++Solo «Recoger en tienda». Con el #82 es definitivo (no hay envíos) y el 400 ya
++no depende de ninguna variable. Así quedó en la primera vuelta:
+ 
+ - **Backend** (`src/checkout/checkout.service.ts`, al inicio de
+   `createSession`): si `method === "shipping"` y la variable
+@@ -220,7 +236,7 @@ Pedidos del panel web), así que el corte de caja no las incluye.
+ 1. ~~«Solo Recoger en tienda»~~: autorizado e implementado (falta desplegar).
+ 2. ~~LIVE solo manuales~~: autorizado e implementado en el servidor. Falta la **aceptación expresa del propietario** de North Bike sobre el stock manual y la lista de productos manuales elegibles.
+ 3. Aplicar los 3 parches en la rama del PR #1 del front (`git am`) o pedir un trabajo en North_bikeFront.
+-4. Juntar este PR a `develop` del backend (Railway develop aplica las migraciones aditivas en Supabase pruebas). Dejar `ECOMMERCE_SHIPPING_ENABLED` y `ECOMMERCE_POS_LIVE_ENABLED` sin definir.
++4. Juntar este PR a `develop` del backend (Railway develop aplica las migraciones aditivas en Supabase pruebas). Dejar `ECOMMERCE_POS_LIVE_ENABLED` sin definir (`ECOMMERCE_SHIPPING_ENABLED` ya no existe; si está puesta en Railway, se puede borrar: no tiene efecto).
+ 5. Configurar en develop Stripe TEST (llave y webhook) y Storage de pruebas, sin pasarlos por chat, y correr la compra TEST real y la subida de imagen.
+ 6. Solo con autorización específica y después de lo anterior: respaldo, backend a `main`, front a `main`, `STRIPE_LIVE_ENABLED=true`.
+ 
+@@ -230,10 +246,10 @@ Orden: backend/migración → frontend → monitoreo. Nada de esto se ejecutó.
+ 
+ **Antes**
+ - [ ] Aceptación escrita del propietario sobre el stock manual y lista de productos manuales elegibles.
+-- [x] Restricción de envío implementada y probada en local (backend 400 + front sin la opción). Falta desplegar.
++- [x] Sin envíos (#82): backend 400 siempre a `shipping` y front solo con «Recoger en tienda», probados en local. Falta desplegar.
+ - [x] Bloqueo de productos del POS en LIVE implementado y probado en local. Falta desplegar.
+ - [ ] Parches 0001–0003 aplicados en el PR #1 del front.
+-- [ ] En producción: `ECOMMERCE_SHIPPING_ENABLED` y `ECOMMERCE_POS_LIVE_ENABLED` sin definir; ningún sincronizado publicado.
++- [ ] En producción: `ECOMMERCE_POS_LIVE_ENABLED` sin definir; ningún sincronizado publicado.
+ - [ ] Stripe TEST real en develop: compra pagada, cancelación desde la página de Stripe, expiración, webhook firmado por Stripe recibido (200) y orden `paid`; pago de prueba de un manual y de un mixto con total igual al cobrado.
+ - [ ] Subida de imagen exitosa en Storage de pruebas.
+ - [ ] Respaldo de la base de producción (Supabase NorthBike-Store) confirmado.
+diff --git a/qa/pre-live-78/README.md b/qa/pre-live-78/README.md
+index 907aa5a..3f8cae2 100644
+--- a/qa/pre-live-78/README.md
++++ b/qa/pre-live-78/README.md
+@@ -6,7 +6,7 @@ El informe con los resultados está en `docs/validacion-pre-live-78.md`.
+ 
+ | Archivo | Qué hace |
+ |---|---|
+-| `e2e-backend.ts` | 96 comprobaciones por HTTP: roles, contrato del POS, publicación, manuales, compras solo manual / solo POS / mixta, 400/409, webhooks (duplicado, firma inválida, pago tardío, monto distinto, expiración), cancelación, concurrencia, bloqueo de envío y recoger en tienda, LIVE solo manuales (simulado), R1 y R5. |
++| `e2e-backend.ts` | 96 comprobaciones por HTTP: roles, contrato del POS, publicación, manuales, compras solo manual / solo POS / mixta, 400/409, webhooks (duplicado, firma inválida, pago tardío, monto distinto, expiración), cancelación, concurrencia, sin envíos (400 a `shipping` aunque haya variable, #82) y recoger en tienda, LIVE solo manuales (simulado), R1 y R5. |
+ | `fake-stripe.ts` | Stripe falso con estado para el SDK oficial. Si hay `STRIPE_MOCK_URL`, cada sesión se valida también con stripe-mock. |
+ | `serve-local.ts` | Deja la API local corriendo con datos DEV- para probar el front. Con `E2E_LIVE_SIM=1` usa una llave con forma LIVE inventada contra el Stripe falso (sin cobros) para ver el bloqueo de productos del POS. |
+ | `front-cache.mjs` | Playwright contra el front: caché del catálogo después de publicar o retirar, capturas de escritorio y móvil, checkout solo con recoger y pago de un carrito mixto (`EXPECT_LIVE=1` con la API en LIVE simulado). |
+diff --git a/qa/pre-live-78/e2e-backend.ts b/qa/pre-live-78/e2e-backend.ts
+index e72024b..187b61a 100644
+--- a/qa/pre-live-78/e2e-backend.ts
++++ b/qa/pre-live-78/e2e-backend.ts
+@@ -341,11 +341,11 @@ async function main() {
+     const shipPos = await checkout([{ productId: casco.id, quantity: 1 }], { method: "shipping", address });
+     const afterShip = { ...(await counts()), sesiones: fake.sessions.size, ordenes: await prisma.ecommerceOrder.count(), stock: (await prisma.onlineProduct.findUniqueOrThrow({ where: { id: casquillo.id } })).stock };
+     numbers.envioBloqueado = { status: [ship.status, shipPos.status], mensaje: ship.body?.message, antes: beforeShip, despues: afterShip };
+-    check("ENVÍO BLOQUEADO por defecto: shipping con dirección da 400 «solo recoger en tienda» (manual y POS)", ship.status === 400 && shipPos.status === 400 && /recoger en tienda/.test(String(ship.body?.message)), numbers.envioBloqueado);
++    check("SIN ENVÍOS (#82): shipping con dirección da 400 «no hace envíos a domicilio» (manual y POS)", ship.status === 400 && shipPos.status === 400 && /no hace envíos a domicilio/.test(String(ship.body?.message)), numbers.envioBloqueado);
+     check("el 400 de envío no crea orden, sesión de Stripe, ventas ni movimientos, ni aparta stock", JSON.stringify(beforeShip) === JSON.stringify(afterShip), numbers.envioBloqueado);
+     const shipNoAddr = await checkout([{ productId: casquillo.id, quantity: 1, source: "manual" }], { method: "shipping" });
+     check("shipping sin dirección: 400", shipNoAddr.status === 400, shipNoAddr.status);
+-    for (const flag of ["false", "1", "yes"]) {
++    for (const flag of ["false", "1", "yes", "true"]) {
+       process.env.ECOMMERCE_SHIPPING_ENABLED = flag;
+       const r = await checkout([{ productId: casquillo.id, quantity: 1, source: "manual" }], { method: "shipping", address });
+       check(`ECOMMERCE_SHIPPING_ENABLED="${flag}" sigue bloqueando (400)`, r.status === 400, r.status);
+@@ -360,12 +360,6 @@ async function main() {
+     const shipCost = await api("POST", "/checkout/session", { items: [{ productId: casquillo.id, quantity: 1, source: "manual" }], customer, fulfillment: { method: "pickup" }, shippingTotal: -100 });
+     const lastSession = [...fake.sessions.values()].pop();
+     check("un shippingTotal manipulado en el cuerpo se ignora (whitelist)", shipCost.status === 201 && lastSession?.amount_total === 15025, { status: shipCost.status, stripe: lastSession?.amount_total });
+-    // Solo para comprobar que la opción futura funciona (no es la configuración del lanzamiento).
+-    process.env.ECOMMERCE_SHIPPING_ENABLED = "true";
+-    const shipOn = await checkout([{ productId: casquillo.id, quantity: 1, source: "manual" }], { method: "shipping", address });
+-    const oShipOn = await prisma.ecommerceOrder.findUnique({ where: { id: shipOn.body?.orderId } });
+-    delete process.env.ECOMMERCE_SHIPPING_ENABLED;
+-    check("con ECOMMERCE_SHIPPING_ENABLED=true se acepta (201) y sigue con shippingTotal 0: no encender sin política", shipOn.status === 201 && Number(oShipOn?.shippingTotal) === 0, { status: shipOn.status, shippingTotal: Number(oShipOn?.shippingTotal) });
+ 
+     // ------------------------------------- R1 / R5 (documentar, no corregir)
+     area = "riesgos-inventario";
+diff --git a/src/checkout/checkout-rules.ts b/src/checkout/checkout-rules.ts
+index 93d54b9..583c9a1 100644
+--- a/src/checkout/checkout-rules.ts
++++ b/src/checkout/checkout-rules.ts
+@@ -55,15 +55,6 @@ export function isLiveStripeKey(key: string | undefined | null) {
+   return /^(sk|rk)_live_/.test(key?.trim() ?? "");
+ }
+ 
+-/**
+- * Envío a domicilio: apagado mientras ECOMMERCE_SHIPPING_ENABLED no sea
+- * exactamente "true". No hay costos, zonas ni política de envío definidos; con
+- * esto solo se puede recoger en tienda, aunque la petición llegue directo a la API.
+- */
+-export function shippingEnabled(flag: string | undefined | null) {
+-  return flag?.trim().toLowerCase() === "true";
+-}
+-
+ /**
+  * Productos del POS (source "pos") en LIVE: no se venden con cobros reales
+  * mientras ECOMMERCE_POS_LIVE_ENABLED no sea "true" (riesgos R1, R2 y R5 del
+diff --git a/src/checkout/checkout.service.ts b/src/checkout/checkout.service.ts
+index 4da94b0..d85c73e 100644
+--- a/src/checkout/checkout.service.ts
++++ b/src/checkout/checkout.service.ts
+@@ -20,7 +20,6 @@ import {
+   isReleasable,
+   posItemsAllowed,
+   posSaleTotals,
+-  shippingEnabled,
+   type InventorySource,
+ } from "./checkout-rules";
+ 
+@@ -65,13 +64,11 @@ export class CheckoutService {
+   ) {}
+ 
+   async createSession(dto: CreateCheckoutSessionDto) {
+-    // Primera etapa: solo recoger en tienda. Se valida aquí (y no solo en la
+-    // web) para que una petición directa no contrate un envío sin costo.
+-    if (dto.fulfillment.method === "shipping" && !shippingEnabled(this.config.get<string>("ECOMMERCE_SHIPPING_ENABLED"))) {
+-      throw new BadRequestException("Por ahora solo está disponible recoger en tienda");
+-    }
+-    if (dto.fulfillment.method === "shipping" && !dto.fulfillment.address) {
+-      throw new BadRequestException("La dirección es obligatoria para envío");
++    // Decisión definitiva del propietario (#82): North Bike no hace envíos a
++    // domicilio. Se rechaza aquí (y no solo en la web), antes de apartar stock,
++    // crear la orden o abrir Stripe, y no hay variable que lo encienda.
++    if (dto.fulfillment.method === "shipping") {
++      throw new BadRequestException("North Bike no hace envíos a domicilio: las compras en línea se recogen en tienda");
+     }
+     if (dto.fulfillment.method === "pickup" && dto.fulfillment.address) {
+       throw new BadRequestException("No se debe enviar dirección al recoger en tienda");
+diff --git a/test/launch-restrictions.spec.ts b/test/launch-restrictions.spec.ts
+index eaf643d..c534739 100644
+--- a/test/launch-restrictions.spec.ts
++++ b/test/launch-restrictions.spec.ts
+@@ -1,20 +1,10 @@
+-// Restricciones de la primera etapa (#78): solo recoger en tienda y, con
++// Restricciones del lanzamiento (#78, #82): solo recoger en tienda y, con
+ // cobros reales, solo productos manuales. Reglas puras y servicio con dobles
+ // (sin base ni Stripe): el rechazo ocurre antes de apartar inventario.
+ import assert from "node:assert/strict";
+ import test from "node:test";
+ import "reflect-metadata";
+-import { isLiveStripeKey, posItemsAllowed, shippingEnabled } from "../src/checkout/checkout-rules";
+-
+-test("envío: solo se enciende con ECOMMERCE_SHIPPING_ENABLED exactamente true", () => {
+-  assert.equal(shippingEnabled(undefined), false);
+-  assert.equal(shippingEnabled(""), false);
+-  assert.equal(shippingEnabled("false"), false);
+-  assert.equal(shippingEnabled("1"), false);
+-  assert.equal(shippingEnabled("yes"), false);
+-  assert.equal(shippingEnabled("true"), true);
+-  assert.equal(shippingEnabled(" TRUE "), true);
+-});
++import { isLiveStripeKey, posItemsAllowed } from "../src/checkout/checkout-rules";
+ 
+ test("productos del POS: bloqueados con llave LIVE salvo ECOMMERCE_POS_LIVE_ENABLED=true", () => {
+   assert.equal(isLiveStripeKey("sk_live_x"), true);
+@@ -45,15 +35,19 @@ function service(env: Record<string, string>) {
+ const customer = { name: "Cliente", email: "c@example.com", phone: "5512345678" };
+ const address = { line1: "Calle 1", city: "Chihuahua", state: "CHIH", postalCode: "31000" };
+ 
+-test("checkout con envío: 400 si no está habilitado, antes de tocar inventario o Stripe", async () => {
++test("checkout con envío: siempre 400, con o sin dirección y con cualquier variable, antes de tocar inventario o Stripe (#82)", async () => {
+   const { CheckoutService } = await import("../src/checkout/checkout.service");
+-  const s = service({ STRIPE_SECRET_KEY: "sk_test_x" });
+-  const checkout = new CheckoutService(s.prisma as any, s.config as any);
+-  await assert.rejects(
+-    checkout.createSession({ items: [{ productId: "onl_1", quantity: 1, source: "manual" }], customer, fulfillment: { method: "shipping", address } } as any),
+-    (error: any) => error.status === 400 && /recoger en tienda/.test(error.message),
+-  );
+-  assert.deepEqual(s.calls, []);
++  for (const env of [{}, { ECOMMERCE_SHIPPING_ENABLED: "true" }, { STRIPE_SECRET_KEY: "sk_live_x", STRIPE_LIVE_ENABLED: "true" }]) {
++    for (const fulfillment of [{ method: "shipping", address }, { method: "shipping" }]) {
++      const s = service({ STRIPE_SECRET_KEY: "sk_test_x", ...env });
++      const checkout = new CheckoutService(s.prisma as any, s.config as any);
++      await assert.rejects(
++        checkout.createSession({ items: [{ productId: "onl_1", quantity: 1, source: "manual" }], customer, fulfillment } as any),
++        (error: any) => error.status === 400 && /no hace envíos a domicilio/.test(error.message),
++      );
++      assert.deepEqual(s.calls, [], JSON.stringify({ env, fulfillment }));
++    }
++  }
+ });
+ 
+ test("checkout con llave LIVE: un artículo del POS (también de carrito anterior o mixto) da 409 sin apartar nada", async () => {
+-- 
+2.43.0
+

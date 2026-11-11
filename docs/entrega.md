@@ -23,7 +23,7 @@ el #80 (envío con costo «por confirmar»).
 **400** «North Bike no hace envíos a domicilio: las compras en línea se recogen en
 tienda», antes de reservar stock, crear la orden o abrir una sesión de Stripe.
 No depende de ninguna variable: se retira `ECOMMERCE_SHIPPING_ENABLED`. El cambio
-va como parche en `qa/solo-recoger-82/back/` mientras no se integre en el PR #3.
+va como parche en `qa/solo-recoger-82/back/` (ver su README) mientras no se integre en el PR #3.
 
 ## Prueba local
 
