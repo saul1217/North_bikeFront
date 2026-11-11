@@ -15,6 +15,8 @@ export type ProductVariant = {
 
 export type Product = {
   id: string;
+  /** Parte de la identidad: un id solo es único junto con su origen. */
+  source: "pos" | "manual";
   slug: string;
   name: string;
   brand?: string;

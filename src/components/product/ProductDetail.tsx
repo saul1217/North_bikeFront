@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { ProductCard } from "@/components/catalog/ProductCard";
 import { categoryLabels } from "@/lib/data/categories";
 import { refreshProduct } from "@/lib/catalog/useProducts";
+import { productKey } from "@/lib/catalog/adapter";
 
 export function ProductDetail({
   product,
@@ -54,7 +55,7 @@ export function ProductDetail({
     setIsAdding(true);
     setAddError(null);
     try {
-      const liveProduct = await refreshProduct(product.id);
+      const liveProduct = await refreshProduct(product.id, product.source);
       if (!liveProduct) throw new Error("El producto ya no está disponible.");
       const liveVariant = liveProduct.variants.find(
         (variant) =>
@@ -74,6 +75,7 @@ export function ProductDetail({
       }
       addItem({
         productId: liveProduct.id,
+        source: liveProduct.source,
         slug: liveProduct.slug,
         name: liveProduct.name,
         brand: liveProduct.brand,
@@ -331,7 +333,7 @@ export function ProductDetail({
           </h2>
           <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-4 md:gap-x-6">
             {related.map((item) => (
-              <ProductCard key={item.id} product={item} />
+              <ProductCard key={productKey(item)} product={item} />
             ))}
           </div>
         </section>

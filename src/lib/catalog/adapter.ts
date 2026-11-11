@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "@/lib/api/client";
-import type { ApiProduct, ApiProductVariant } from "@/lib/api/types";
+import type { ApiProduct, ApiProductVariant, ProductSource } from "@/lib/api/types";
 import type { Product, ProductVariant } from "@/lib/types/product";
 
 function slugify(value: string) {
@@ -48,7 +48,7 @@ function toVariant(variant: ApiProductVariant): ProductVariant {
  * Maps only fields that the backend actually exposes. The slug is a stable
  * frontend route key derived from name + id because the API has no slug field.
  */
-export function adaptProduct(apiProduct: ApiProduct): Product {
+export function adaptProduct(apiProduct: ApiProduct, source: ProductSource = "pos"): Product {
   const rawImages = [
     ...(apiProduct.images ?? []),
     ...(apiProduct.image ? [apiProduct.image] : []),
@@ -60,6 +60,7 @@ export function adaptProduct(apiProduct: ApiProduct): Product {
 
   return {
     id: apiProduct.id,
+    source,
     slug: `${slugify(apiProduct.name) || "producto"}-${apiProduct.id}`,
     name: apiProduct.name,
     brand: apiProduct.brand ?? undefined,
@@ -82,10 +83,30 @@ export function adaptProduct(apiProduct: ApiProduct): Product {
   };
 }
 
-export function adaptProducts(apiProducts: ApiProduct[]) {
+/**
+ * El origen lo decide la ruta que entregó el producto (no el campo opcional
+ * de la respuesta), para no mezclar catálogos aunque un backend anterior no
+ * mande `source`.
+ */
+export function adaptProducts(apiProducts: ApiProduct[], source: ProductSource = "pos") {
   return apiProducts
     .filter((product) => product.status === "activo")
-    .map(adaptProduct);
+    .map((product) => adaptProduct(product, source));
+}
+
+export function productKey(product: { id: string; source?: ProductSource }) {
+  return `${product.source ?? "pos"}:${product.id}`;
+}
+
+/** Une ambos catálogos sin duplicar la misma pareja origen + id. */
+export function combineCatalogs(pos: Product[], manual: Product[]) {
+  const seen = new Set<string>();
+  return [...pos, ...manual].filter((product) => {
+    const key = productKey(product);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function variantMatchesLabel(variant: ProductVariant, label?: string) {

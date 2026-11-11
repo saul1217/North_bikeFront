@@ -1,4 +1,4 @@
-import { BarChart3, LogOut, PackageSearch, PanelLeft, ShieldCheck } from "lucide-react";
+import { BarChart3, LogOut, PackageSearch, PanelLeft, ShieldCheck, Store } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { useAuth } from "@/context/AuthContext";
@@ -6,7 +6,14 @@ import { useAuth } from "@/context/AuthContext";
 const navItems = [
   { href: "/admin", label: "Resumen", icon: BarChart3, end: true },
   { href: "/admin/orders", label: "Pedidos", icon: PackageSearch, end: false },
+  { href: "/admin/products", label: "Productos online", icon: Store, end: false },
 ];
+
+function pageTitle(pathname: string) {
+  if (pathname.startsWith("/admin/orders")) return "Pedidos ecommerce";
+  if (pathname.startsWith("/admin/products")) return "Productos de la tienda online";
+  return "Resumen comercial";
+}
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
@@ -54,7 +61,7 @@ export function AdminLayout() {
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[#d8e1df] bg-[#eef2f1]/95 px-4 backdrop-blur-md lg:ml-64 lg:px-10">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-north-steel">Panel administrativo</p>
-          <h1 className="font-display text-2xl font-bold uppercase tracking-[0.04em]">{location.pathname.includes("orders") ? "Pedidos ecommerce" : "Resumen comercial"}</h1>
+          <h1 className="font-display text-2xl font-bold uppercase tracking-[0.04em]">{pageTitle(location.pathname)}</h1>
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden text-xs text-north-muted sm:block">Sesión de {user?.username}</span>
@@ -65,6 +72,14 @@ export function AdminLayout() {
       <main className="lg:ml-64">
         <div className="border-b border-[#d8e1df] bg-white/60 px-4 py-3 lg:px-10">
           <div className="flex items-center gap-2 text-xs text-north-muted"><PanelLeft className="h-3.5 w-3.5 text-[#c28437]" /> NorthBike / Administración</div>
+          <nav aria-label="Secciones del panel" className="-mx-1 mt-3 flex gap-1 overflow-x-auto lg:hidden">
+            {navItems.map(({ href, label, icon: Icon, end }) => (
+              <NavLink key={href} to={href} end={end} className={({ isActive }) => `flex shrink-0 items-center gap-1.5 border px-3 py-2 text-xs font-semibold ${isActive ? "border-north-primary bg-white text-north-dark" : "border-transparent text-north-muted"}`}>
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </NavLink>
+            ))}
+          </nav>
         </div>
         <Outlet />
       </main>

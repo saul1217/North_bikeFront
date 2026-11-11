@@ -6,6 +6,9 @@ import { useCart } from "@/context/CartContext";
 import { formatPrice } from "@/lib/catalog/filters";
 import { ApiRequestError } from "@/lib/api/types";
 import { Button } from "@/components/ui/Button";
+import { cartLineKey } from "@/lib/cart/storage";
+import { findCartIssues, toCheckoutItems, type CartIssue } from "@/lib/checkout/cart";
+import { loadCatalog } from "@/lib/catalog/useProducts";
 
 type FulfillmentMethod = "pickup" | "shipping";
 type Address = { line1: string; line2: string; city: string; state: string; postalCode: string };
@@ -39,7 +42,7 @@ function validateCheckout(name: string, email: string, phone: string, method: Fu
 
 function apiErrorMessage(error: unknown) {
   if (error instanceof ApiRequestError) {
-    if (error.status === 409) return "El inventario cambió mientras preparabas tu pedido. Actualiza el catálogo e inténtalo de nuevo.";
+    if (error.status === 409) return error.message ? `No pudimos apartar tu pedido: ${error.message}.` : "El inventario cambió mientras preparabas tu pedido. Revisa tu carrito e inténtalo de nuevo.";
     if (error.status === 400) return error.message || "Revisa los datos del checkout e inténtalo de nuevo.";
     if (error.status === 500) return "No pudimos iniciar el pago. Inténtalo de nuevo en unos segundos.";
   }
@@ -51,7 +54,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 }
 
 export default function CheckoutPage() {
-  const { items, subtotal } = useCart();
+  const { items, subtotal, removeItem, setQuantity } = useCart();
   const [searchParams] = useSearchParams();
   const canceled = searchParams.get("canceled") === "1";
   const canceledOrderId = searchParams.get("order_id");
@@ -64,6 +67,7 @@ export default function CheckoutPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [issues, setIssues] = useState<CartIssue[]>([]);
   const fieldRefs = useRef<Partial<Record<FieldName, HTMLInputElement>>>({});
 
   useEffect(() => {
@@ -95,17 +99,29 @@ export default function CheckoutPage() {
     }
 
     setIsSubmitting(true);
+    setIssues([]);
     try {
       const session = await createCheckoutSession({
-        items: items.map((item) => ({ productId: item.productId, variantId: item.variantId, quantity: item.quantity })),
+        items: toCheckoutItems(items),
         customer: { name: name.trim(), email: email.trim(), phone: phone.trim() },
         fulfillment: { method, ...(method === "shipping" ? { address: { ...address, country: "MX" } } : {}) },
       });
       window.location.assign(session.checkoutUrl);
     } catch (submitError) {
       setError(apiErrorMessage(submitError));
+      if (submitError instanceof ApiRequestError && (submitError.status === 409 || submitError.status === 400)) {
+        // Se vuelve a consultar el catálogo para señalar qué artículo cambió.
+        const catalog = await loadCatalog({ force: true }).catch(() => null);
+        if (catalog) setIssues(findCartIssues(items, catalog));
+      }
       setIsSubmitting(false);
     }
+  }
+
+  function fixIssue(issue: CartIssue) {
+    if (issue.kind === "unavailable") removeItem(issue.item);
+    else setQuantity(issue.item, issue.available);
+    setIssues((current) => current.filter((candidate) => cartLineKey(candidate.item) !== cartLineKey(issue.item)));
   }
 
   if (items.length === 0) {
@@ -138,10 +154,10 @@ export default function CheckoutPage() {
             <label className="text-sm font-semibold" htmlFor="checkout-postalCode">Código postal<input id="checkout-postalCode" ref={(element) => { if (element) fieldRefs.current.postalCode = element; }} value={address.postalCode} onChange={(e) => updateAddress("postalCode", e.target.value)} className={inputClass("postalCode")} aria-invalid={Boolean(fieldErrors.postalCode)} aria-describedby={describedBy("postalCode")} autoComplete="postal-code" /> <FieldError id="postalCode" message={fieldErrors.postalCode} /></label>
           </div>}
           </div></div></section>
-          {error && <div role="alert" className="border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+          {error && <div role="alert" className="border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>{error}</p>{issues.length > 0 && <ul className="mt-3 space-y-2" aria-label="Artículos que requieren atención">{issues.map((issue) => <li key={cartLineKey(issue.item)} className="flex flex-col gap-2 border-t border-red-200 pt-2 sm:flex-row sm:items-center sm:justify-between"><span><strong>{issue.item.name}</strong>{issue.item.variantLabel ? ` (${issue.item.variantLabel})` : ""}: {issue.kind === "unavailable" ? "ya no está disponible en la tienda en línea." : `solo quedan ${issue.available} ${issue.available === 1 ? "pieza" : "piezas"}.`}</span><button type="button" onClick={() => fixIssue(issue)} className="shrink-0 border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-800 hover:border-red-500">{issue.kind === "unavailable" ? "Quitar del carrito" : `Ajustar a ${issue.available}`}</button></li>)}</ul>}</div>}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="flex items-center gap-2 text-xs text-north-muted"><CreditCard className="h-4 w-4" /> Pago seguro · entorno de pruebas</p><Button type="submit" size="lg" disabled={isSubmitting}>{isSubmitting ? "Preparando pago…" : <>Continuar al pago <ArrowRight className="h-4 w-4" /></>}</Button></div>
         </form>
-        <aside className="border border-north-border bg-white lg:sticky lg:top-28"><div className="surface-dark-texture bg-north-dark px-5 py-5 text-white"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-north-steel-muted">Resumen</p><h2 className="mt-1 font-display text-2xl font-bold uppercase tracking-[0.06em]">Tu pedido</h2></div><ul className="divide-y divide-north-border px-5">{items.map((item) => <li key={`${item.productId}-${item.variantId ?? item.variantLabel ?? "default"}`} className="flex gap-3 py-4"><div className="flex h-16 w-14 shrink-0 items-center justify-center overflow-hidden bg-north-background">{item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="text-[10px] text-north-steel">Sin imagen</span>}</div><div className="min-w-0 flex-1"><p className="line-clamp-2 text-sm font-semibold text-north-dark">{item.name}</p>{item.variantLabel && <p className="mt-1 text-xs text-north-muted">{item.variantLabel}</p>}<p className="mt-1 text-xs text-north-muted">{item.quantity} × {formatPrice(item.price)}</p></div><p className="text-sm font-semibold text-north-dark">{formatPrice(item.price * item.quantity)}</p></li>)}</ul><div className="space-y-3 border-t border-north-border bg-north-background px-5 py-5 text-sm"><div className="flex justify-between text-north-muted"><span>Subtotal</span><span>{formatPrice(subtotal)}</span></div><div className="flex justify-between text-north-muted"><span>Envío</span><span>Gratis</span></div><div className="flex justify-between border-t border-north-border pt-3 font-display text-xl font-bold text-north-dark"><span>Total</span><span>{formatPrice(subtotal)}</span></div><p className="flex items-start gap-2 pt-2 text-xs leading-relaxed text-north-muted"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-north-primary" /> Tu inventario se reserva temporalmente al iniciar el pago.</p></div></aside>
+        <aside className="border border-north-border bg-white lg:sticky lg:top-28"><div className="surface-dark-texture bg-north-dark px-5 py-5 text-white"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-north-steel-muted">Resumen</p><h2 className="mt-1 font-display text-2xl font-bold uppercase tracking-[0.06em]">Tu pedido</h2></div><ul className="divide-y divide-north-border px-5">{items.map((item) => <li key={cartLineKey(item)} className="flex gap-3 py-4"><div className="flex h-16 w-14 shrink-0 items-center justify-center overflow-hidden bg-north-background">{item.image ? <img src={item.image} alt="" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="text-[10px] text-north-steel">Sin imagen</span>}</div><div className="min-w-0 flex-1"><p className="line-clamp-2 text-sm font-semibold text-north-dark">{item.name}</p>{item.variantLabel && <p className="mt-1 text-xs text-north-muted">{item.variantLabel}</p>}<p className="mt-1 text-xs text-north-muted">{item.quantity} × {formatPrice(item.price)}</p></div><p className="text-sm font-semibold text-north-dark">{formatPrice(item.price * item.quantity)}</p></li>)}</ul><div className="space-y-3 border-t border-north-border bg-north-background px-5 py-5 text-sm"><div className="flex justify-between text-north-muted"><span>Subtotal</span><span>{formatPrice(subtotal)}</span></div><div className="flex justify-between text-north-muted"><span>Envío</span><span>Gratis</span></div><div className="flex justify-between border-t border-north-border pt-3 font-display text-xl font-bold text-north-dark"><span>Total</span><span>{formatPrice(subtotal)}</span></div><p className="flex items-start gap-2 pt-2 text-xs leading-relaxed text-north-muted"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-north-primary" /> Tu inventario se reserva temporalmente al iniciar el pago. El importe final lo confirma North Bike en la página de pago.</p></div></aside>
       </div>
     </div>
   );

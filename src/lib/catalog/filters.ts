@@ -19,7 +19,7 @@ export function getRelatedProducts(list: Product[], product: Product, limit = 4)
   return list
     .filter(
       (item) =>
-        item.id !== product.id &&
+        (item.id !== product.id || item.source !== product.source) &&
         (item.category === product.category ||
           (item.brand && product.brand && item.brand === product.brand)),
     )
