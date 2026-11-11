@@ -31,7 +31,7 @@ await page.route((url) => url.pathname.startsWith("/api/") && url.port !== new U
   return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
 });
 
-await page.addInitScript((items) => { if (!sessionStorage.getItem("seeded")) { localStorage.setItem("northbike-cart", JSON.stringify(items)); sessionStorage.setItem("seeded", "1"); } }, cart);
+await page.addInitScript((items) => { if (!window.sessionStorage.getItem("seeded")) { localStorage.setItem("northbike-cart", JSON.stringify(items)); window.sessionStorage.setItem("seeded", "1"); } }, cart);
 await page.goto(`${FRONT}/checkout`);
 await page.getByLabel("Nombre completo").fill("DEV Comprador");
 await page.getByLabel("Correo electrónico").fill("dev@example.com");
@@ -84,7 +84,7 @@ check("el cliente no manda importes (ni envío ni total)", sent && !JSON.stringi
 // 6. Móvil
 const mobile = await browser.newContext({ viewport: { width: 390, height: 844 } });
 const mpage = await mobile.newPage();
-await mpage.route((url) => url.pathname.startsWith("/api/") && url.port !== new URL(FRONT).port, (route) => route.fulfill({ status: 200, contentType: "application/json", status: new URL(route.request().url()).pathname.endsWith("/online-products") ? 503 : 200, body: new URL(route.request().url()).pathname.endsWith("/online-products") ? "{}" : "[]" }));
+await mpage.route((url) => url.pathname.startsWith("/api/") && url.port !== new URL(FRONT).port, (route) => route.fulfill({ contentType: "application/json", status: new URL(route.request().url()).pathname.endsWith("/online-products") ? 503 : 200, body: new URL(route.request().url()).pathname.endsWith("/online-products") ? "{}" : "[]" }));
 await mpage.addInitScript((items) => localStorage.setItem("northbike-cart", JSON.stringify(items)), cart);
 await mpage.goto(`${FRONT}/checkout`);
 await mpage.getByText("Envío a domicilio", { exact: true }).click();
