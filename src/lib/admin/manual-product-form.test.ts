@@ -61,6 +61,12 @@ describe("mensajes de error", () => {
     expect(adminProductErrorMessage(error, "x")).toContain("Usa otro SKU");
   });
 
+  it("un 500 no muestra el texto técnico del servidor", () => {
+    const message = adminProductErrorMessage(new ApiRequestError("Internal server error", { kind: "http", status: 500 }), "No se pudo subir la imagen.");
+    expect(message).toContain("No se pudo subir la imagen.");
+    expect(message).not.toContain("Internal");
+  });
+
   it("403 y 404 tienen mensaje propio", () => {
     expect(adminProductErrorMessage(new ApiRequestError("Forbidden", { kind: "http", status: 403 }), "x")).toContain("permiso");
     expect(adminProductErrorMessage(new ApiRequestError("Not found", { kind: "http", status: 404 }), "x")).toContain("ya no existe");

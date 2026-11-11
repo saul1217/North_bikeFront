@@ -129,6 +129,8 @@ export function adminProductErrorMessage(error: unknown, fallback: string) {
     if (error.status === 403) return "Tu cuenta no tiene permiso para administrar la tienda en línea.";
     if (error.status === 404) return "El producto ya no existe o fue retirado. Actualiza la lista.";
     if (error.status === 400) return error.message ? `Revisa los datos: ${error.message}.` : "Revisa los datos del producto.";
+    // Un 5xx trae textos técnicos («Internal server error»): se muestra el mensaje de la acción.
+    if (error.kind === "http" && (error.status ?? 0) >= 500) return `${fallback} Inténtalo de nuevo en unos minutos.`;
     return error.message || fallback;
   }
   return error instanceof Error ? error.message : fallback;
